@@ -3,7 +3,7 @@
 A music player for Android that looks and works like the **3rd generation iPod** from 2003.
 It has the grey-blue LCD with its pixel font, the four red-lit touch buttons and the touch wheel,
 under a clear acrylic layer. It plays the music on your phone and, if you like, your Spotify
-library.
+library, on the phone or on your Sonos speakers, Chromecasts and Spotify Connect devices.
 
 <p align="center">
   <img src="docs/screenshots/main-menu.png" width="220" alt="Main menu, white">
@@ -48,8 +48,13 @@ Every push to `main` builds a signed APK with GitHub Actions and publishes it as
 Every build is signed with the same key, so a new release installs over the old one and keeps
 your settings, playlists and Spotify sign-in.
 
-**Requirements:** Android 8.0 or later. The equalizer needs Android 9 or later. Spotify needs the
-Spotify app and Spotify Premium.
+**Requirements:**
+- Android 8.0 or later; the equalizer needs Android 9 or later.
+- Spotify needs the Spotify app and Spotify Premium.
+- Playing on Sonos or Chromecast needs the phone and speaker on the same Wi-Fi; Chromecast also
+  needs Google Play services.
+
+The APK is about 4 MB, mostly Google's Cast libraries.
 
 ---
 
@@ -63,8 +68,11 @@ The whole screen is the front of the iPod, drawn in code and scaled to fit any p
   wheel and the centre button are sunk into holes in it. Each hole's wall casts a soft shadow, and
   its polished edge catches the light. A faint gloss runs across the face.
 - **Light that follows the phone:** the light comes from the ceiling of the room, read from the
-  gravity sensor. Tilt the phone and the shadows and edge highlights swing round, and the gloss
-  slides like a reflection. Lay it flat and the light comes from straight above.
+  gravity sensor. Everything lit is brightest on the side facing it: the shadows and edge
+  highlights in the holes, the shading of the body, the gloss on the acrylic and the reflection on
+  the screen glass. Tilt the phone and they all swing round, with the gloss sliding the other way
+  like a reflection. Lay it flat and the light comes from straight above, so the face looks almost
+  even.
 - **Red-lit buttons:** the four touch buttons glow red while the backlight is on and turn grey
   when it's off.
 - **Two finishes:** the original white, or a black version that never existed. See
@@ -185,11 +193,12 @@ The first load shows songs as they come in.
 
 - Picking a song in a playlist or album plays it there, so the following songs play after it.
   In All Songs and Songs, the next 30 songs from the list are queued after it.
-- The music always comes out of **this phone**, never a computer or speaker on your account.
+- The music comes out of **this phone**, never a computer or speaker that happens to be active on
+  your account, unless you pick one under [Speakers](#speakers).
 - If the Spotify app is asleep, the iPod wakes it in the background with Spotify's App Remote SDK,
   without showing it. Only if that fails does it open Spotify for a second and come back by itself.
-- Now Playing shows "Spotify" in the corner, plus the song, progress, shuffle and repeat. Play/pause,
-  previous, next, volume and scrubbing all work.
+- Now Playing shows "Spotify" in the corner ("Spotify on *speaker*" when it plays elsewhere), plus
+  the song, progress, shuffle and repeat. Play/pause, previous, next, volume and scrubbing all work.
 - Playing your own music again switches back automatically; Spotify pauses when it loses the audio.
 - When you open the iPod while Spotify has a song playing or paused, here or on a speaker, Now
   Playing picks it up.
@@ -238,9 +247,9 @@ there straight away.
   equalizer doesn't apply while playing on a speaker.
 - **Spotify Connect devices:** every speaker, TV, computer or web player on your Spotify account
   shows up by name. Pick one and Spotify's music moves there straight away, playing or paused as it
-  was, and new Spotify songs keep playing there. Now Playing then reads "Spotify on *speaker*", and the wheel sets that
-  speaker's own volume in steps of 5%. If the speaker is switched off, songs play on the phone.
-  This is for Spotify only.
+  was, and new Spotify songs keep playing there. Now Playing then reads "Spotify on *speaker*", and
+  the wheel sets that speaker's own volume in steps of 5%. If the speaker is switched off, songs
+  play on the phone. This is for Spotify only.
 - **Other Outputs:** opens Android's own output switcher for Bluetooth speakers and headphones and
   other outputs your phone supports. This works for everything, including the phone's own music.
 
@@ -322,11 +331,19 @@ app; never use it for the Play Store.
 
 **Version numbers:** the version code is GitHub's run number (`1.0.N`). A local build is version 1
 unless you set `GITHUB_RUN_NUMBER`. Android refuses to install a lower version over a higher one, so
-to test a local build over a release, build with a matching number:
+to test a local build over a release, build with the latest release's number or higher:
 
 ```bash
-GITHUB_RUN_NUMBER=11 ./gradlew assembleRelease
+GITHUB_RUN_NUMBER=18 ./gradlew assembleRelease
 ```
+
+**Libraries:**
+- **Spotify's App Remote SDK** (Apache-2.0) lives in `app/libs/`, taken from
+  [Spotify's GitHub releases](https://github.com/spotify/android-sdk/releases); it needs Gson.
+- **Google's Cast SDK** comes from Google's Maven repository. It's pinned to 22.3.1, because 23.x
+  needs Android Gradle plugin 9.1. It also needs AndroidX, which is switched on in
+  `gradle.properties`.
+- The build prints warnings about Kotlin metadata from the Cast SDK; they're harmless.
 
 ---
 
