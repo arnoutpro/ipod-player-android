@@ -48,6 +48,7 @@ public final class Menus {
         items.add(sub("Spotify", this::spotify));
         items.add(sub("Extras", this::extras));
         items.add(sub("Settings", this::settings));
+        items.add(sub("Speakers", this::speakers));
         items.add(item("Shuffle Songs").onSelect(() -> {
             PlayerService ps = host.service();
             List<Track> all = host.library().songs();
@@ -109,6 +110,46 @@ public final class Menus {
             }
             return items;
         }).empty("Hold Select on a song");
+    }
+
+    // ---- speakers --------------------------------------------------------------------------
+
+    /**
+     * Where the music plays: this phone, a Spotify Connect device (for Spotify), or another output
+     * like Bluetooth picked in Android's own switcher (for everything the phone plays).
+     */
+    private Screen speakers() {
+        ListScreen s = new ListScreen(lcd, "Speakers", speakerItems(new ArrayList<>()));
+        if (host.spotify().connected()) {
+            SpotifyPlayer player = host.spotifyPlayer();
+            host.spotify().call(player::speakers, (list, err) -> {
+                if (list != null) s.setItems(speakerItems(list));
+                host.redraw();
+            });
+        }
+        return s;
+    }
+
+    private List<ListScreen.Item> speakerItems(List<SpotifyPlayer.Speaker> spotify) {
+        SpotifyPlayer player = host.spotifyPlayer();
+        List<ListScreen.Item> items = new ArrayList<>();
+        items.add(item("This Phone")
+                .value(() -> player.target() == null ? "✓" : "")
+                .onSelect(() -> {
+                    player.useSpeaker(null);
+                    host.redraw();
+                }));
+        for (SpotifyPlayer.Speaker sp : spotify) {
+            if (sp.phone) continue;
+            items.add(item(sp.name)
+                    .value(() -> sp.id.equals(player.target()) ? "✓" : "Spotify")
+                    .onSelect(() -> {
+                        player.useSpeaker(sp);
+                        host.redraw();
+                    }));
+        }
+        items.add(item("Other Outputs").arrow().onSelect(host::showOutputSwitcher));
+        return items;
     }
 
     // ---- spotify ---------------------------------------------------------------------------

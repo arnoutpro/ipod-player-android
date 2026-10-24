@@ -171,7 +171,17 @@ public class MainActivity extends Activity implements PlayerService.Listener {
         if (!libraryRequested && hasMusicPermission()) loadLibrary();
         registerReceiver(batteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         front = true;
-        if (spotifyActive) spotifyPlayer.startPolling();
+        if (spotifyActive) {
+            spotifyPlayer.startPolling();
+        } else if (service == null || !service.isPlayingOrLoading()) {
+            // Spotify may be playing (or paused) from before, here or on a speaker: pick it up.
+            spotifyPlayer.probe(() -> {
+                if (spotifyActive || service != null && service.isPlayingOrLoading()) return;
+                spotifyActive = true;
+                spotifyPlayer.startPolling();
+                refreshScreen();
+            });
+        }
         view.wake();
         view.startTilt();
     }
@@ -279,6 +289,20 @@ public class MainActivity extends Activity implements PlayerService.Listener {
     public Spotify spotify() { return spotify; }
 
     public SpotifyLibrary spotifyLibrary() { return spotifyLibrary; }
+
+    public SpotifyPlayer spotifyPlayer() { return spotifyPlayer; }
+
+    /** Android's own picker for Bluetooth and other audio outputs of this phone. */
+    public void showOutputSwitcher() {
+        if (Build.VERSION.SDK_INT >= 34
+                && android.media.MediaRouter2.getInstance(this).showSystemOutputSwitcher()) return;
+        try {
+            startActivity(new Intent("com.android.settings.panel.action.MEDIA_OUTPUT")
+                    .putExtra("com.android.settings.panel.extra.PACKAGE_NAME", getPackageName()));
+        } catch (android.content.ActivityNotFoundException e) {
+            startActivity(new Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS));
+        }
+    }
 
     /** More of the Spotify library arrived: rebuild the list on screen to show it. */
     private void spotifyLibraryChanged() {

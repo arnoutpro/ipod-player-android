@@ -48,6 +48,13 @@ public class NowPlayingScreen extends Screen {
         }
         mode = VOLUME;
         modeTouched = now;
+        if (ps.speaker() != null) {
+            // Playing on another speaker: set its own volume, not the phone's.
+            int nv = Math.max(0, Math.min(100, ps.speakerVolume() + d * 5));
+            if (nv == ps.speakerVolume()) return false;
+            ps.setSpeakerVolume(nv);
+            return true;
+        }
         int max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
         int vol = audio.getStreamVolume(AudioManager.STREAM_MUSIC);
         int nv = Math.max(0, Math.min(max, vol + d));
@@ -91,7 +98,7 @@ public class NowPlayingScreen extends Screen {
             trackSince = now;
         }
 
-        c.drawText(ps.counter(), 8, 22, small);
+        c.drawText(Lcd.fit(small, ps.counter(), w - 90), 8, 22, small);
         drawModeIcons(c, ps, w);
 
         // Laid out for 220 px; extra height goes half above the titles and half above the bar.
@@ -107,11 +114,16 @@ public class NowPlayingScreen extends Screen {
         float bx = 16, bw = w - 32, by = 150 + extra, bh = 14;
 
         if (mode == VOLUME) {
-            int max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
-            int vol = audio.getStreamVolume(AudioManager.STREAM_MUSIC);
+            float frac;
+            if (ps.speaker() != null) {
+                frac = ps.speakerVolume() / 100f;
+            } else {
+                int max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+                frac = audio.getStreamVolume(AudioManager.STREAM_MUSIC) / (float) Math.max(1, max);
+            }
             speaker(c, 10, by + bh / 2f, false);
             speaker(c, w - 26, by + bh / 2f, true);
-            bar(c, 40, by, w - 80, bh, vol / (float) Math.max(1, max), false);
+            bar(c, 40, by, w - 80, bh, frac, false);
             return;
         }
 

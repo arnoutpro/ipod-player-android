@@ -43,6 +43,11 @@ public final class SpotifyPlayer implements Playback {
     private String status;
     private boolean polling, inFlight;
     private SpotifyAppRemote remote;
+    /** The Spotify Connect device to play on, or null for this phone. */
+    private String target;
+    private String speakerName;
+    private int speakerVolume;
+    private long volumeSetAt;
 
     private final Runnable poll = new Runnable() {
         @Override public void run() {
@@ -54,6 +59,7 @@ public final class SpotifyPlayer implements Playback {
     public SpotifyPlayer(Spotify spotify, MainActivity host) {
         this.spotify = spotify;
         this.host = host;
+        target = host.prefs().getString("spSpeaker", null);
     }
 
     public void startPolling() {
@@ -72,28 +78,52 @@ public final class SpotifyPlayer implements Playback {
         final String contextUri, trackUri;
         final int index;
         final List<String> uris;
+        /** Moves what's playing to the speaker instead of starting something. */
+        final boolean transfer;
+        /** For a transfer: keep playing there, or arrive paused. */
+        final boolean keepPlaying;
 
-        private Request(String contextUri, String trackUri, int index, List<String> uris) {
+        private Request(String contextUri, String trackUri, int index, List<String> uris, boolean transfer,
+                        boolean keepPlaying) {
             this.contextUri = contextUri;
             this.trackUri = trackUri;
             this.index = index;
             this.uris = uris;
+            this.transfer = transfer;
+            this.keepPlaying = keepPlaying;
         }
 
         /** trackUri sits at index in the playlist or album; null plays it from the top. */
         public static Request inContext(String contextUri, String trackUri, int index) {
-            return new Request(contextUri, trackUri, index, null);
+            return new Request(contextUri, trackUri, index, null, false, true);
         }
 
         /** Plays songs from start onwards, e.g. an artist's songs or Songs A-Z. */
         public static Request songs(List<String> uris, int start) {
             List<String> queue = new ArrayList<>(uris.subList(start, Math.min(uris.size(), start + QUEUE_SONGS + 1)));
-            return new Request(null, queue.get(0), -1, queue);
+            return new Request(null, queue.get(0), -1, queue, false, true);
+        }
+
+        static Request transfer(boolean keepPlaying) {
+            return new Request(null, null, -1, null, true, keepPlaying);
+        }
+    }
+
+    /** A Spotify Connect device: a speaker, TV, computer or this phone. */
+    public static final class Speaker {
+        public final String id, name, type;
+        public final boolean phone;
+
+        Speaker(String id, String name, String type, boolean phone) {
+            this.id = id;
+            this.name = name;
+            this.type = type;
+            this.phone = phone;
         }
     }
 
     public void play(Request rq) {
-        status = "Starting Spotify...";
+        status = rq.transfer ? "Switching speaker..." : "Starting Spotify...";
         has = true;
         host.redraw();
         if (rq.uris != null) {
@@ -102,7 +132,7 @@ public final class SpotifyPlayer implements Playback {
             wake(rq);
             return;
         }
-        spotify.call(this::findPhone, (device, err) -> {
+        spotify.call(this::findTarget, (device, err) -> {
             if (err != null) fail(err);
             else if (device != null) playOn(device, rq);
             // Spotify only lists this phone while its app is awake: wake it in the background.
@@ -113,6 +143,12 @@ public final class SpotifyPlayer implements Playback {
     /** Starts the song on this phone through the Web API. */
     private void playOn(String device, Request rq) {
         spotify.call(() -> {
+            if (rq.transfer) {
+                JSONObject body = new JSONObject().put("device_ids", new JSONArray().put(device))
+                        .put("play", rq.keepPlaying);
+                spotify.send("PUT", "/me/player", body.toString());
+                return null;
+            }
             JSONObject body = new JSONObject();
             if (rq.contextUri != null) {
                 body.put("context_uri", rq.contextUri);
@@ -186,10 +222,10 @@ public final class SpotifyPlayer implements Playback {
             return;
         }
         spotify.call(() -> {
-            String device = findPhone();
+            String device = findTarget();
             for (int i = 0; i < 8 && device == null; i++) {
                 sleep(500);
-                device = findPhone();
+                device = findTarget();
             }
             return device;
         }, (device, err) -> {
@@ -201,7 +237,8 @@ public final class SpotifyPlayer implements Playback {
     /** Plays through the SDK itself; its song positions follow shuffle, so only a fallback. */
     private void playRemote(SpotifyAppRemote r, Request rq) {
         PlayerApi player = r.getPlayerApi();
-        CallResult<Empty> call = rq.contextUri != null && rq.trackUri != null && rq.index >= 0
+        CallResult<Empty> call = rq.transfer ? (rq.keepPlaying ? player.resume() : player.pause())
+                : rq.contextUri != null && rq.trackUri != null && rq.index >= 0
                 ? player.skipToIndex(rq.contextUri, rq.index)
                 : player.play(rq.contextUri != null ? rq.contextUri : rq.trackUri);
         call.setResultCallback(empty -> {
@@ -219,6 +256,17 @@ public final class SpotifyPlayer implements Playback {
         player.play(rq.trackUri).setResultCallback(empty -> {
             status = null;
             queue(player, rq.uris, 1);
+            // The SDK plays on this phone; carry on on the chosen speaker.
+            if (target != null) {
+                spotify.call(() -> {
+                    String device = findTarget();
+                    if (device != null && device.equals(target)) {
+                        spotify.send("PUT", "/me/player", new JSONObject()
+                                .put("device_ids", new JSONArray().put(device)).put("play", true).toString());
+                    }
+                    return null;
+                }, null);
+            }
             main.postDelayed(this::refresh, 800);
             host.redraw();
         }).setErrorCallback(t -> fail("Can't start Spotify"));
@@ -241,7 +289,7 @@ public final class SpotifyPlayer implements Playback {
             String device = null;
             for (int i = 0; i < 15 && device == null; i++) {
                 sleep(1000);
-                device = findPhone();
+                device = findTarget();
             }
             main.post(this::backToIPod);
             if (device == null) throw new IOException("Open Spotify first");
@@ -267,6 +315,41 @@ public final class SpotifyPlayer implements Playback {
      * This phone as a Spotify device. Never another device, even an active one: the music should
      * come out of the iPod, not a computer's web player.
      */
+    private String findTarget() throws IOException, JSONException {
+        if (target != null) {
+            for (Speaker sp : speakers()) if (sp.id.equals(target)) return sp.id;
+        }
+        return findPhone(); // the chosen speaker is off: play here
+    }
+
+    /** Every Spotify Connect device on the account that can be controlled; background thread. */
+    public List<Speaker> speakers() throws IOException, JSONException {
+        JSONArray devices = spotify.get("/me/player/devices").optJSONArray("devices");
+        List<Speaker> out = new ArrayList<>();
+        for (int i = 0; devices != null && i < devices.length(); i++) {
+            JSONObject d = devices.getJSONObject(i);
+            if (d.optBoolean("is_restricted")) continue;
+            out.add(new Speaker(d.optString("id"), d.optString("name"), d.optString("type"), isPhone(d)));
+        }
+        return out;
+    }
+
+    private boolean isPhone(JSONObject device) {
+        if (!"Smartphone".equals(device.optString("type"))) return false;
+        String name = Settings.Global.getString(host.getContentResolver(), "device_name");
+        return name == null || name.equals(device.optString("name"));
+    }
+
+    /** The chosen speaker's id, or null for this phone. */
+    public String target() { return target; }
+
+    /** Sends Spotify to a speaker (null for this phone) from now on, moving what's playing. */
+    public void useSpeaker(Speaker sp) {
+        target = sp == null || sp.phone ? null : sp.id;
+        host.prefs().edit().putString("spSpeaker", target).apply();
+        if (host.playback() == this && has) play(Request.transfer(playing));
+    }
+
     private String findPhone() throws IOException, JSONException {
         JSONArray devices = spotify.get("/me/player/devices").optJSONArray("devices");
         String name = Settings.Global.getString(host.getContentResolver(), "device_name");
@@ -300,6 +383,16 @@ public final class SpotifyPlayer implements Playback {
         try { Thread.sleep(ms); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
     }
 
+    /** Asks Spotify whether it has a song playing or paused anywhere; runs found if so. */
+    public void probe(Runnable found) {
+        if (!spotify.connected()) return;
+        spotify.call(() -> spotify.get("/me/player"), (state, err) -> {
+            if (state == null || state.optJSONObject("item") == null) return;
+            read(state);
+            found.run();
+        });
+    }
+
     /** Asks Spotify what it is playing. */
     public void refresh() {
         if (inFlight || !spotify.connected()) return;
@@ -316,6 +409,12 @@ public final class SpotifyPlayer implements Playback {
     }
 
     private void read(JSONObject state) {
+        JSONObject device = state.optJSONObject("device");
+        speakerName = device != null && !isPhone(device) ? device.optString("name") : null;
+        // Right after the wheel moved, Spotify still reports the old volume: keep ours.
+        if (device != null && SystemClock.elapsedRealtime() - volumeSetAt > 3000) {
+            speakerVolume = device.optInt("volume_percent", speakerVolume);
+        }
         JSONObject item = state.optJSONObject("item");
         if (item == null) {
             has = status != null; // keep showing a pending "Starting Spotify..."
@@ -367,7 +466,21 @@ public final class SpotifyPlayer implements Playback {
     @Override public String album() { return status != null ? "" : album; }
 
     /** Spotify's name stands in for "3 of 12": the credit its terms ask for. */
-    @Override public String counter() { return "Spotify"; }
+    @Override public String counter() { return speakerName != null ? "Spotify on " + speakerName : "Spotify"; }
+
+    @Override public String speaker() { return speakerName; }
+
+    @Override public int speakerVolume() { return speakerVolume; }
+
+    private final Runnable sendVolume = () -> command("PUT", "/me/player/volume?volume_percent=" + speakerVolume);
+
+    /** The wheel calls this on every tick, so only the last volume is sent. */
+    @Override public void setSpeakerVolume(int percent) {
+        speakerVolume = Math.max(0, Math.min(100, percent));
+        volumeSetAt = SystemClock.elapsedRealtime();
+        main.removeCallbacks(sendVolume);
+        main.postDelayed(sendVolume, 300);
+    }
 
     @Override public int getPosition() {
         if (!playing) return position;

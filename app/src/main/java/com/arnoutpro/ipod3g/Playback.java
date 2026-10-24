@@ -35,4 +35,12 @@ public interface Playback {
     void previous();
 
     void seekTo(int ms);
+
+    /** The speaker it plays on when that isn't this phone (e.g. Spotify Connect), else null. */
+    default String speaker() { return null; }
+
+    /** That speaker's own volume, 0-100. */
+    default int speakerVolume() { return 0; }
+
+    default void setSpeakerVolume(int percent) { }
 }

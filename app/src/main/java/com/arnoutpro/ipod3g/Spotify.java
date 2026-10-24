@@ -69,9 +69,11 @@ public final class Spotify {
 
     private final SharedPreferences prefs;
     private final ExecutorService io = Executors.newSingleThreadExecutor();
+    /** Long jobs like loading the whole library, so they never hold up player commands. */
+    private final ExecutorService bulk = Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
-    private String accessToken;
-    private long expiresAt;
+    private volatile String accessToken;
+    private volatile long expiresAt;
 
     public Spotify(SharedPreferences prefs) { this.prefs = prefs; }
 
@@ -135,8 +137,13 @@ public final class Spotify {
     // ---- requests --------------------------------------------------------------------------
 
     /** Runs work on the background thread and reports back on the main thread. */
-    public <T> void call(Work<T> work, Done<T> done) {
-        io.execute(() -> {
+    public <T> void call(Work<T> work, Done<T> done) { run(io, work, done); }
+
+    /** Like {@link #call} but on a thread of its own, for work that takes minutes. */
+    public <T> void callLong(Work<T> work, Done<T> done) { run(bulk, work, done); }
+
+    private <T> void run(ExecutorService on, Work<T> work, Done<T> done) {
+        on.execute(() -> {
             T result = null;
             String error = null;
             try {

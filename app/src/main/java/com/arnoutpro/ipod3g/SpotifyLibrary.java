@@ -117,7 +117,7 @@ public final class SpotifyLibrary {
         if (System.currentTimeMillis() - loadedAt < FRESH_MS && !now.liked.isEmpty()) return;
         loading = true;
         boolean first = now.liked.isEmpty();
-        spotify.call(() -> fetch(first), (snap, err) -> {
+        spotify.callLong(() -> fetch(first), (snap, err) -> {
             loading = false;
             if (snap != null) {
                 now = snap;

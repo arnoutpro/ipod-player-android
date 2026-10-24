@@ -27,6 +27,7 @@ on the Play Store.
 - [Now Playing](#now-playing)
 - [Equalizer](#equalizer)
 - [Spotify](#spotify)
+- [Speakers](#speakers)
 - [Settings](#settings)
 - [Extras](#extras)
 - [Background playback](#background-playback)
@@ -98,6 +99,7 @@ The menus follow the original iPod, plus a Spotify menu.
 | **Spotify** | Playlists, Artists, Albums, Songs, Recently Liked, Disconnect. See [Spotify](#spotify). |
 | **Extras** | Clock, Games › Brick |
 | **Settings** | About, Shuffle, Repeat, EQ, Backlight Timer, Clicker, Color, Rescan Music |
+| **Speakers** | Where the music plays: this phone, Spotify Connect devices, other outputs. See [Speakers](#speakers). |
 | **Shuffle Songs** | Plays your whole library in random order |
 | **Backlight** | Turns the backlight on or off |
 | **Now Playing** | Appears once something is playing |
@@ -189,6 +191,8 @@ The first load shows songs as they come in.
 - Now Playing shows "Spotify" in the corner, plus the song, progress, shuffle and repeat. Play/pause,
   previous, next, volume and scrubbing all work.
 - Playing your own music again switches back automatically; Spotify pauses when it loses the audio.
+- When you open the iPod while Spotify has a song playing or paused, here or on a speaker, Now
+  Playing picks it up.
 
 **Limits from Spotify's rules (2026)**
 
@@ -214,6 +218,23 @@ The app ships with the author's Client ID. To use your own (for example to add y
    [`Spotify.java`](app/src/main/java/com/arnoutpro/ipod3g/Spotify.java) and build.
 
 Sign-in uses the authorization code flow with PKCE, so the app never needs the client secret.
+
+---
+
+## Speakers
+
+The **Speakers** menu picks where the music plays.
+
+- **This Phone:** the default.
+- **Spotify Connect devices:** every speaker, TV, computer or web player on your Spotify account
+  shows up by name. Pick one and Spotify's music moves there straight away, playing or paused as it
+  was, and new Spotify songs keep playing there. Now Playing then reads "Spotify on *speaker*", and the wheel sets that
+  speaker's own volume in steps of 5%. If the speaker is switched off, songs play on the phone.
+  This is for Spotify only.
+- **Other Outputs:** opens Android's own output switcher for Bluetooth speakers and headphones and
+  other outputs your phone supports. This works for everything, including the phone's own music.
+
+Casting the phone's own music to a Chromecast isn't supported yet.
 
 ---
 
