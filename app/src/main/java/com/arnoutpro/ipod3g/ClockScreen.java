@@ -19,10 +19,11 @@ public class ClockScreen extends Screen {
         float tw = lcd.big.measureText(time);
         float sw = sub.isEmpty() ? 0 : lcd.text.measureText(sub) + 8;
         float x = (w - tw - sw) / 2f;
-        c.drawText(time, x, 110, lcd.big);
-        if (!sub.isEmpty()) c.drawText(sub, x + tw + 8, 110, lcd.text);
-        c.drawRect(30, 130, w - 30, 132, lcd.ink);
-        c.drawText(date, (w - lcd.text.measureText(date)) / 2f, 166, lcd.text);
+        float dy = Math.max(0, h - 220) / 2f; // laid out for 220 px, kept centred
+        c.drawText(time, x, 110 + dy, lcd.big);
+        if (!sub.isEmpty()) c.drawText(sub, x + tw + 8, 110 + dy, lcd.text);
+        c.drawRect(30, 130 + dy, w - 30, 132 + dy, lcd.ink);
+        c.drawText(date, (w - lcd.text.measureText(date)) / 2f, 166 + dy, lcd.text);
     }
 
     @Override

@@ -16,7 +16,7 @@ import java.util.ArrayList;
  * 160x128) without anti-aliasing, so it keeps the chunky pixel look when scaled up.
  */
 public final class Lcd {
-    public static final int W = 320, H = 256;
+    public static final int W = 320, H = 292; // title bar and seven rows
     public static final int TITLE_H = 36, ROW_H = 36;
     private static final long SLIDE_MS = 170;
 

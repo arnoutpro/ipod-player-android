@@ -26,7 +26,7 @@ import android.view.View;
 @SuppressLint("ViewConstructor")
 public class IPodView extends View implements SensorEventListener {
     /** Height of the face's content in units of {@link #bw}, without spare space. */
-    private static final float CONTENT_H = 0.07f + 0.64f + 0.07f + 0.06f + 0.18f + 0.06f + 0.72f + 0.08f;
+    private static final float CONTENT_H = 0.07f + 0.80f * Lcd.H / Lcd.W + 0.07f + 0.06f + 0.18f + 0.06f + 0.72f + 0.08f;
     private static final float WHEEL_STEP_DEG = 15f;
     private static final long HOLD_MS = 650, SEEK_REPEAT_MS = 180;
     private static final int GLOW = 0xFFFF4A26, GLOW_OFF = 0xFFA9A9A4;

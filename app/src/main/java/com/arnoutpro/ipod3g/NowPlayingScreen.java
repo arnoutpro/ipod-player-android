@@ -96,7 +96,9 @@ public class NowPlayingScreen extends Screen {
         c.drawText(count, 8, 22, small);
         drawModeIcons(c, ps, w);
 
-        float base1 = 66, lh = 30;
+        // Laid out for 220 px; extra height goes half above the titles and half above the bar.
+        float extra = Math.max(0, h - 220);
+        float base1 = 66 + extra / 2f, lh = 30;
         boolean m1 = lcd.marquee(c, text, t.title, 8, w - 16, base1, now, trackSince);
         boolean m2 = lcd.marquee(c, text, t.artist, 8, w - 16, base1 + lh, now, trackSince);
         boolean m3 = lcd.marquee(c, text, t.album, 8, w - 16, base1 + 2 * lh, now, trackSince);
@@ -104,7 +106,7 @@ public class NowPlayingScreen extends Screen {
 
         int dur = Math.max(1, ps.getDuration());
         int at = mode == SCRUB && scrubPos >= 0 ? scrubPos : ps.getPosition();
-        float bx = 16, bw = w - 32, by = 150, bh = 14;
+        float bx = 16, bw = w - 32, by = 150 + extra, bh = 14;
 
         if (mode == VOLUME) {
             int max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
