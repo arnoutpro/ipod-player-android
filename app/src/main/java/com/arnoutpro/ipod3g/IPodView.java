@@ -26,7 +26,9 @@ import android.view.View;
 @SuppressLint("ViewConstructor")
 public class IPodView extends View implements SensorEventListener {
     /** Height of the face's content in units of {@link #bw}, without spare space. */
-    private static final float CONTENT_H = 0.07f + 0.80f * Lcd.H / Lcd.W + 0.07f + 0.06f + 0.18f + 0.06f + 0.72f + 0.08f;
+    /** LCD width and the black border around it, in units of {@link #bw}. */
+    private static final float LCD_W = 0.85f, BEZEL = 0.0175f;
+    private static final float CONTENT_H = 0.07f + LCD_W * Lcd.H / Lcd.W + 2 * BEZEL + 0.06f + 0.18f + 0.06f + 0.72f + 0.08f;
     private static final float WHEEL_STEP_DEG = 15f;
     private static final long HOLD_MS = 650, SEEK_REPEAT_MS = 180;
     private static final int GLOW = 0xFFFF4A26;
@@ -110,8 +112,8 @@ public class IPodView extends View implements SensorEventListener {
         float spare = h - bw * CONTENT_H;
         float cx = w / 2f;
 
-        float lw = bw * 0.80f, lh = lw * Lcd.H / Lcd.W;
-        float pad = bw * 0.035f;
+        float lw = bw * LCD_W, lh = lw * Lcd.H / Lcd.W;
+        float pad = bw * BEZEL;
         float bezelTop = bw * 0.07f + spare * 0.30f;
         float lx = cx - lw / 2f, ly = bezelTop + pad;
         lcdRect.set(Math.round(lx), Math.round(ly), Math.round(lx + lw), Math.round(ly + lh));
@@ -262,7 +264,7 @@ public class IPodView extends View implements SensorEventListener {
     }
 
     private void drawScreen(Canvas c, long now) {
-        float r = bw * 0.03f;
+        float r = bw * 0.024f;
         RectF rim = new RectF(bezel);
         rim.inset(-bw * 0.008f, -bw * 0.008f);
         paint.setColor(finish.bezelRim);
