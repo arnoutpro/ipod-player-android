@@ -1,8 +1,10 @@
 package com.arnoutpro.ipod3g;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.LinearGradient;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RadialGradient;
@@ -10,6 +12,10 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.Typeface;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.HapticFeedbackConstants;
@@ -18,7 +24,7 @@ import android.view.View;
 
 /** Draws the whole iPod and turns touches on the wheel and buttons into iPod input. */
 @SuppressLint("ViewConstructor")
-public class IPodView extends View {
+public class IPodView extends View implements SensorEventListener {
     /** Height of the face's content in units of {@link #bw}, without spare space. */
     private static final float CONTENT_H = 0.07f + 0.64f + 0.07f + 0.06f + 0.18f + 0.06f + 0.72f + 0.08f;
     private static final float WHEEL_STEP_DEG = 15f;
@@ -39,7 +45,17 @@ public class IPodView extends View {
     private final RectF body = new RectF(), bezel = new RectF();
     private final float[] btnX = new float[4];
     private float btnY, btnR, wheelX, wheelY, wheelR, centerR, bw;
-    private Shader bodyShader, wheelShader, centerShader, btnShader, glassShader;
+    private Shader bodyShader, wheelShader, centerShader, btnShader, glassShader, glossShader;
+    // Holes in the acrylic top layer that the buttons and the wheel sit sunk in.
+    private final Shader[] btnWall = new Shader[4], btnEdge = new Shader[4];
+    private Shader wheelWall, wheelEdge, centerWall, centerEdge;
+    private float btnHole, wheelHole, centerHole;
+
+    // Light from the room's ceiling, followed with the gravity sensor: the direction on screen
+    // towards it, and how far the phone is tilted up from lying flat (0..1).
+    private float gravX, gravY = SensorManager.GRAVITY_EARTH * 0.8f;
+    private float lightX, lightY = -1, lightTilt = 0.8f;
+    private final Matrix glossMatrix = new Matrix();
 
     // touch state
     private int target = T_NONE;
@@ -110,8 +126,9 @@ public class IPodView extends View {
         wheelY = btnY + btnR + bw * 0.06f + spare * 0.15f + wheelR;
         centerR = wheelR * 0.35f;
 
+        // White plastic seen through the acrylic: a touch cooler and darker than pure white.
         bodyShader = new LinearGradient(body.left, body.top, body.right, body.bottom,
-                new int[]{0xFFFFFFFF, 0xFFFBFBFA, 0xFFF1F1EF}, new float[]{0f, 0.5f, 1f}, Shader.TileMode.CLAMP);
+                new int[]{0xFFFAFBFB, 0xFFF3F4F4, 0xFFE8E9E8}, new float[]{0f, 0.5f, 1f}, Shader.TileMode.CLAMP);
         wheelShader = new RadialGradient(wheelX, wheelY - wheelR * 0.3f, wheelR * 1.3f,
                 0xFFFFFFFF, 0xFFF0F0EE, Shader.TileMode.CLAMP);
         centerShader = new LinearGradient(0, wheelY - centerR, 0, wheelY + centerR,
@@ -120,7 +137,81 @@ public class IPodView extends View {
                 0xFFF2F2F0, 0xFFFFFFFF, Shader.TileMode.CLAMP);
         glassShader = new LinearGradient(bezel.left, bezel.top, bezel.left + bezel.width() * 0.6f, bezel.bottom,
                 0x30FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP);
+        // A broad diagonal sheen on the acrylic surface, over everything.
+        glossShader = new LinearGradient(0, 0, w, h * 0.55f,
+                new int[]{0x20FFFFFF, 0x0AFFFFFF, 0x00FFFFFF, 0x07FFFFFF, 0x00FFFFFF},
+                new float[]{0f, 0.3f, 0.48f, 0.56f, 0.7f}, Shader.TileMode.CLAMP);
+
+        btnHole = btnR * 1.1f;
+        wheelHole = wheelR + bw * 0.014f;
+        centerHole = centerR + bw * 0.006f;
+        buildHoles();
     }
+
+    private void buildHoles() {
+        if (bw == 0) return;
+        for (int i = 0; i < 4; i++) {
+            btnWall[i] = wallShader(btnX[i], btnY, btnHole, 0x20);
+            btnEdge[i] = edgeShader(btnX[i], btnY, btnHole);
+        }
+        wheelWall = wallShader(wheelX, wheelY, wheelHole, 0x1C);
+        wheelEdge = edgeShader(wheelX, wheelY, wheelHole);
+        centerWall = wallShader(wheelX, wheelY, centerHole, 0x14);
+        centerEdge = edgeShader(wheelX, wheelY, centerHole);
+        // The sheen slides the other way as the phone tilts, like a reflection.
+        glossMatrix.setTranslate(-lightX * lightTilt * bw * 0.12f, -lightY * lightTilt * bw * 0.12f);
+        glossShader.setLocalMatrix(glossMatrix);
+    }
+
+    /** Shadow the hole's wall casts inwards, deepest on the side the light comes from. */
+    private Shader wallShader(float x, float y, float hole, int alpha) {
+        float off = hole * 0.14f * lightTilt, rad = hole + off;
+        return new RadialGradient(x - lightX * off, y - lightY * off, rad,
+                new int[]{0x00000000, 0x00000000, alpha << 24},
+                new float[]{0f, (hole * 0.8f) / rad, 1f}, Shader.TileMode.CLAMP);
+    }
+
+    /** The cut edge of the acrylic: dark towards the light, catching it on the far side. */
+    private Shader edgeShader(float x, float y, float hole) {
+        float k = 0.35f + 0.65f * lightTilt;
+        float dx = lightX * hole, dy = lightY * hole;
+        return new LinearGradient(x + dx, y + dy, x - dx, y - dy,
+                new int[]{(int) (0x1A * k) << 24, 0x06000000, (int) (0x90 * k) << 24 | 0xFFFFFF},
+                new float[]{0f, 0.45f, 1f}, Shader.TileMode.CLAMP);
+    }
+
+    // ---- tilt ------------------------------------------------------------------------------
+
+    public void startTilt() {
+        SensorManager sm = (SensorManager) getContext().getSystemService(Context.SENSOR_SERVICE);
+        Sensor g = sm.getDefaultSensor(Sensor.TYPE_GRAVITY);
+        if (g == null) g = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        if (g != null) sm.registerListener(this, g, SensorManager.SENSOR_DELAY_UI);
+    }
+
+    public void stopTilt() {
+        ((SensorManager) getContext().getSystemService(Context.SENSOR_SERVICE)).unregisterListener(this);
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent e) {
+        // Smooth it, then only redraw for a visible change.
+        gravX += (e.values[0] - gravX) * 0.2f;
+        gravY += (e.values[1] - gravY) * 0.2f;
+        float len = (float) Math.hypot(gravX, gravY);
+        float tilt = Math.min(1f, len / SensorManager.GRAVITY_EARTH);
+        // The sensor's y points to the top of the screen, the canvas's y down.
+        float nx = len > 0.01f ? gravX / len : 0, ny = len > 0.01f ? -gravY / len : -1;
+        if (Math.abs(tilt - lightTilt) < 0.02f && Math.hypot(nx - lightX, ny - lightY) < 0.03f) return;
+        lightX = nx;
+        lightY = ny;
+        lightTilt = tilt;
+        buildHoles();
+        invalidate();
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 
     // ---- drawing ---------------------------------------------------------------------------
 
@@ -132,6 +223,9 @@ public class IPodView extends View {
         drawScreen(c, now);
         for (int i = 0; i < 4; i++) drawButton(c, i);
         drawWheel(c);
+        paint.setShader(glossShader);
+        c.drawRect(body, paint);
+        paint.setShader(null);
 
         if (delay >= 0) {
             handler.removeCallbacks(frame);
@@ -168,8 +262,8 @@ public class IPodView extends View {
     private void drawButton(Canvas c, int i) {
         float x = btnX[i];
         boolean down = pressed == i;
-        paint.setColor(0xFFDDDDDA);
-        c.drawCircle(x, btnY, btnR * 1.05f, paint);
+        paint.setColor(0xFFE6E7E5); // floor of the hole, around the button
+        c.drawCircle(x, btnY, btnHole, paint);
         paint.setShader(btnShader);
         c.drawCircle(x, btnY, btnR, paint);
         paint.setShader(null);
@@ -209,6 +303,18 @@ public class IPodView extends View {
                 c.drawText("MENU", x, btnY - (fm.ascent + fm.descent) / 2f, glyph);
                 break;
         }
+        drawHole(c, x, btnY, btnHole, btnWall[i], btnEdge[i]);
+    }
+
+    private void drawHole(Canvas c, float x, float y, float hole, Shader wall, Shader edge) {
+        paint.setShader(wall);
+        c.drawCircle(x, y, hole, paint);
+        paint.setShader(edge);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(bw * 0.006f);
+        c.drawCircle(x, y, hole, paint);
+        paint.setStyle(Paint.Style.FILL);
+        paint.setShader(null);
     }
 
     /** A triangle pointing left (dir -1) or right (dir 1), starting at x. */
@@ -227,14 +333,8 @@ public class IPodView extends View {
     }
 
     private void drawWheel(Canvas c) {
-        // Engraved outer edge: dark line with a light one below it.
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(bw * 0.007f);
-        paint.setColor(0xFFFFFFFF);
-        c.drawCircle(wheelX, wheelY + bw * 0.004f, wheelR, paint);
-        paint.setColor(0xFFD3D3CF);
-        c.drawCircle(wheelX, wheelY, wheelR, paint);
-        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(0xFFE6E7E5); // floor of the hole, around the wheel
+        c.drawCircle(wheelX, wheelY, wheelHole, paint);
         paint.setShader(wheelShader);
         c.drawCircle(wheelX, wheelY, wheelR - bw * 0.004f, paint);
         paint.setShader(null);
@@ -243,12 +343,10 @@ public class IPodView extends View {
             c.drawCircle(wheelX, wheelY, wheelR, paint);
         }
 
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setColor(0xFFFFFFFF);
-        c.drawCircle(wheelX, wheelY + bw * 0.004f, centerR, paint);
-        paint.setColor(0xFFD3D3CF);
-        c.drawCircle(wheelX, wheelY, centerR, paint);
-        paint.setStyle(Paint.Style.FILL);
+        drawHole(c, wheelX, wheelY, wheelHole, wheelWall, wheelEdge);
+
+        paint.setColor(0xFFE6E7E5);
+        c.drawCircle(wheelX, wheelY, centerHole, paint);
         paint.setShader(centerShader);
         c.drawCircle(wheelX, wheelY, centerR - bw * 0.004f, paint);
         paint.setShader(null);
@@ -256,6 +354,7 @@ public class IPodView extends View {
             paint.setColor(0x18000000);
             c.drawCircle(wheelX, wheelY, centerR, paint);
         }
+        drawHole(c, wheelX, wheelY, centerHole, centerWall, centerEdge);
     }
 
     // ---- touch -----------------------------------------------------------------------------

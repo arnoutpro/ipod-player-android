@@ -120,11 +120,13 @@ public class MainActivity extends Activity implements PlayerService.Listener {
         if (!libraryRequested && hasMusicPermission()) loadLibrary();
         registerReceiver(batteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         view.wake();
+        view.startTilt();
     }
 
     @Override
     protected void onPause() {
         unregisterReceiver(batteryReceiver);
+        view.stopTilt();
         super.onPause();
     }
 
