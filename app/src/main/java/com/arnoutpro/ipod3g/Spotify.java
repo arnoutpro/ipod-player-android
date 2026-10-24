@@ -57,6 +57,8 @@ public final class Spotify {
     public static final class ApiException extends IOException {
         public final int status;
         public final String reason;
+        /** Seconds Spotify asks to wait after "too many requests". */
+        int retryAfter;
 
         ApiException(int status, String message, String reason) {
             super(message);
@@ -170,9 +172,13 @@ public final class Spotify {
     }
 
     public List<JSONObject> all(String path, String wrapper, Pages pages) throws IOException, JSONException {
+        return all(path, wrapper, MAX_ITEMS, pages);
+    }
+
+    public List<JSONObject> all(String path, String wrapper, int max, Pages pages) throws IOException, JSONException {
         List<JSONObject> out = new ArrayList<>();
         String next = path;
-        while (next != null && out.size() < MAX_ITEMS) {
+        while (next != null && out.size() < max) {
             JSONObject page = get(next);
             if (wrapper != null) page = page.getJSONObject(wrapper);
             JSONArray items = page.optJSONArray("items");
@@ -193,8 +199,19 @@ public final class Spotify {
         try {
             return http(method, url, json, "application/json", token());
         } catch (ApiException e) {
-            if (e.status != 401) throw e;
-            accessToken = null; // expired early: refresh once and try again
+            if (e.status == 401) {
+                accessToken = null; // expired early: refresh once and try again
+            } else if (e.status == 429 && e.retryAfter <= 30) {
+                // Loading a big library can hit Spotify's rate limit: wait as asked, then go on.
+                try {
+                    Thread.sleep(Math.max(1, e.retryAfter) * 1000L);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw e;
+                }
+            } else {
+                throw e;
+            }
             return http(method, url, json, "application/json", token());
         }
     }
@@ -247,7 +264,13 @@ public final class Spotify {
             int status = c.getResponseCode();
             InputStream in = status < 400 ? c.getInputStream() : c.getErrorStream();
             String text = in == null ? "" : read(in);
-            if (status >= 400) throw error(status, text);
+            if (status >= 400) {
+                ApiException e = error(status, text);
+                try {
+                    e.retryAfter = Integer.parseInt(c.getHeaderField("Retry-After"));
+                } catch (NumberFormatException ignored) { }
+                throw e;
+            }
             return text;
         } finally {
             c.disconnect();

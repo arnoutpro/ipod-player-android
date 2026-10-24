@@ -41,6 +41,7 @@ public class MainActivity extends Activity implements PlayerService.Listener {
     private PlayerService service;
     private Spotify spotify;
     private SpotifyPlayer spotifyPlayer;
+    private SpotifyLibrary spotifyLibrary;
     /** Spotify is what Now Playing and the buttons control, until local music plays again. */
     private boolean spotifyActive;
     private String spotifyError;
@@ -79,6 +80,7 @@ public class MainActivity extends Activity implements PlayerService.Listener {
         prefs = getSharedPreferences("ipod", MODE_PRIVATE);
         spotify = new Spotify(prefs);
         spotifyPlayer = new SpotifyPlayer(spotify, this);
+        spotifyLibrary = new SpotifyLibrary(spotify, getFilesDir(), this::spotifyLibraryChanged);
         clicker = new Clicker();
         view = new IPodView(this);
         lcd = view.lcd;
@@ -115,6 +117,7 @@ public class MainActivity extends Activity implements PlayerService.Listener {
         refreshScreen();
         spotify.finishLogin(data, (r, err) -> {
             spotifyError = err;
+            if (err == null) spotifyLibrary.refresh();
             refreshScreen();
         });
     }
@@ -275,6 +278,14 @@ public class MainActivity extends Activity implements PlayerService.Listener {
 
     public Spotify spotify() { return spotify; }
 
+    public SpotifyLibrary spotifyLibrary() { return spotifyLibrary; }
+
+    /** More of the Spotify library arrived: rebuild the list on screen to show it. */
+    private void spotifyLibraryChanged() {
+        if (lcd.top() instanceof ListScreen) lcd.top().shown();
+        redraw();
+    }
+
     /** The last sign-in problem, shown in the Spotify menu. */
     public String spotifyError() { return spotifyError; }
 
@@ -285,6 +296,7 @@ public class MainActivity extends Activity implements PlayerService.Listener {
 
     public void disconnectSpotify() {
         spotify.logout();
+        spotifyLibrary.clear();
         if (spotifyActive) {
             spotifyActive = false;
             spotifyPlayer.stopPolling();
@@ -292,14 +304,11 @@ public class MainActivity extends Activity implements PlayerService.Listener {
         refreshScreen();
     }
 
-    /**
-     * Plays a Spotify song within its playlist or album, where it sits at index, and switches the
-     * iPod over to it.
-     */
-    public void playSpotify(String contextUri, String trackUri, int index) {
+    /** Plays Spotify songs and switches the iPod over to them. */
+    public void playSpotify(SpotifyPlayer.Request rq) {
         if (service != null && service.isPlayingOrLoading()) service.pause();
         spotifyActive = true;
-        spotifyPlayer.play(contextUri, trackUri, index);
+        spotifyPlayer.play(rq);
         spotifyPlayer.startPolling();
         lcd.showNowPlaying();
     }

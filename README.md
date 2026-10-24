@@ -95,7 +95,7 @@ The menus follow the original iPod, plus a Spotify menu.
 | --- | --- |
 | **Playlists** | On-The-Go (your own quick playlist), Recently Added, Top 25 Most Played |
 | **Browse** | Artists, Albums, Genres, Songs, Composers |
-| **Spotify** | Playlists, Albums, Artists, Liked Songs, Disconnect. See [Spotify](#spotify). |
+| **Spotify** | Playlists, Artists, Albums, Songs, Recently Liked, Disconnect. See [Spotify](#spotify). |
 | **Extras** | Clock, Games › Brick |
 | **Settings** | About, Shuffle, Repeat, EQ, Backlight Timer, Clicker, Color, Rescan Music |
 | **Shuffle Songs** | Plays your whole library in random order |
@@ -164,16 +164,25 @@ Spotify app on the same phone. The iPod's Now Playing and buttons control it.
 
 **Browsing**
 
-- **Playlists:** your own and the ones you follow.
-- **Albums:** your saved albums.
-- **Artists:** the artists you follow, then their albums and singles.
-- **Liked Songs**
+Your Liked Songs, saved albums and followed artists are browsed like the iPod's own music:
 
-Lists fill in page by page, so the first rows show up within a second, even for thousands of songs.
+- **Playlists:** your own and the ones you follow.
+- **Artists:** everyone in your Liked Songs and saved albums, plus the artists you follow, A–Z.
+  Each has **All Songs**, their albums in your library, and **More on Spotify** with all their
+  albums and singles.
+- **Albums:** the albums of your liked songs plus your saved albums, A–Z. A saved album shows the
+  whole album; any other shows the songs you liked from it.
+- **Songs:** all your liked songs, A–Z.
+- **Recently Liked:** your liked songs in Spotify's order, newest first.
+
+The library is loaded once in the background, about 20 songs per request, and kept on the phone,
+so browsing is instant. It's refreshed when you open the Spotify menu, at most every 10 minutes.
+The first load shows songs as they come in.
 
 **Playing**
 
-- Picking a song plays it within its playlist or album, so the following songs play after it.
+- Picking a song in a playlist or album plays it there, so the following songs play after it.
+  In All Songs and Songs, the next 30 songs from the list are queued after it.
 - The music always comes out of **this phone**, never a computer or speaker on your account.
 - If the Spotify app is asleep, the iPod wakes it in the background with Spotify's App Remote SDK,
   without showing it. Only if that fails does it open Spotify for a second and come back by itself.
