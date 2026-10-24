@@ -119,13 +119,15 @@ public class ListScreen extends Screen {
             if (hi) c.drawRect(0, y, right, y + Lcd.ROW_H, lcd.ink);
             text.setColor(fg);
 
+            float arrowW = it.arrow ? 22 : 0;
             float valueW = 0;
             String v = it.value != null ? it.value.get() : null;
             if (v != null && !v.isEmpty()) {
                 valueW = text.measureText(v) + 14;
-                c.drawText(v, right - 10 - text.measureText(v), Lcd.baseline(text, y, Lcd.ROW_H), text);
+                // Ends just before the arrow when there is one.
+                float end = it.arrow ? right - 24 : right - 10;
+                c.drawText(v, end - text.measureText(v), Lcd.baseline(text, y, Lcd.ROW_H), text);
             }
-            float arrowW = it.arrow ? 22 : 0;
             if (it.arrow) {
                 Path p = new Path();
                 float ax = right - 16, ay = y + Lcd.ROW_H / 2f;
