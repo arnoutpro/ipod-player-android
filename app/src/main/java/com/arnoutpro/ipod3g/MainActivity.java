@@ -301,6 +301,8 @@ public class MainActivity extends Activity implements PlayerService.Listener {
 
     public Spotify spotify() { return spotify; }
 
+    public Menus menus() { return menus; }
+
     public SpotifyLibrary spotifyLibrary() { return spotifyLibrary; }
 
     public SpotifyPlayer spotifyPlayer() { return spotifyPlayer; }

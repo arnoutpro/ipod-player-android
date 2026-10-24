@@ -48,7 +48,6 @@ public final class Menus {
         items.add(sub("Spotify", this::spotify));
         items.add(sub("Extras", this::extras));
         items.add(sub("Settings", this::settings));
-        items.add(sub("Speakers", this::speakers));
         items.add(item("Shuffle Songs").onSelect(() -> {
             PlayerService ps = host.service();
             List<Track> all = host.library().songs();
@@ -118,7 +117,8 @@ public final class Menus {
      * Where the music plays: this phone, a Spotify Connect device (for Spotify), or another output
      * like Bluetooth picked in Android's own switcher (for everything the phone plays).
      */
-    private Screen speakers() {
+    /** Settings > Speakers, also opened by holding the centre button on Now Playing. */
+    public Screen speakers() {
         List<List<SpotifyPlayer.Speaker>> spotify = new ArrayList<>();
         spotify.add(new ArrayList<>());
         ListScreen s = new ListScreen(lcd, "Speakers", speakerItems(spotify.get(0)));
@@ -489,6 +489,7 @@ public final class Menus {
         items.add(item("EQ").arrow()
                 .value(() -> host.service() != null ? host.service().eq().label() : "")
                 .onSelect(() -> lcd.push(eq())));
+        items.add(sub("Speakers", this::speakers));
         items.add(item("Backlight Timer").arrow()
                 .value(() -> backlightLabel(host.backlightSeconds()))
                 .onSelect(() -> lcd.push(backlightTimer())));

@@ -78,6 +78,7 @@ The whole screen is the front of the iPod, drawn in code and scaled to fit any p
 | --- | --- |
 | **Wheel** | Scroll through menus. Spins faster through long lists. On Now Playing it sets the volume. |
 | **Centre button** | Select. On Now Playing it switches the wheel to scrubbing through the song. |
+| **Hold centre on Now Playing** | Open Speakers, to pick where the music plays. |
 | **Hold centre on a song** | Add it to the On-The-Go playlist (you'll feel a short buzz). |
 | **MENU** | Back one level. The phone's back gesture does the same. |
 | **⏮ / ⏭** | Previous / next song. Hold to rewind / fast-forward. |
@@ -98,8 +99,7 @@ The menus follow the original iPod, plus a Spotify menu.
 | **Browse** | Artists, Albums, Genres, Songs, Composers |
 | **Spotify** | Playlists, Artists, Albums, Songs, Recently Liked, Disconnect. See [Spotify](#spotify). |
 | **Extras** | Clock, Games › Brick |
-| **Settings** | About, Shuffle, Repeat, EQ, Backlight Timer, Clicker, Color, Rescan Music |
-| **Speakers** | Where the music plays: this phone, Spotify Connect devices, other outputs. See [Speakers](#speakers). |
+| **Settings** | About, Shuffle, Repeat, EQ, Speakers, Backlight Timer, Clicker, Color, Rescan Music |
 | **Shuffle Songs** | Plays your whole library in random order |
 | **Backlight** | Turns the backlight on or off |
 | **Now Playing** | Appears once something is playing |
@@ -223,7 +223,8 @@ Sign-in uses the authorization code flow with PKCE, so the app never needs the c
 
 ## Speakers
 
-The **Speakers** menu picks where the music plays.
+**Settings › Speakers** picks where the music plays. On Now Playing, hold the centre button to get
+there straight away.
 
 - **This Phone:** the default. Picking it while casting brings the music back to the phone, paused
   where the speaker left off.
@@ -260,6 +261,7 @@ send music to Sonos speakers from here: Spotify doesn't list them to other apps.
 | **Shuffle** | Off / Songs |
 | **Repeat** | Off / One / All |
 | **EQ** | The equalizer, see [above](#equalizer) |
+| **Speakers** | Where the music plays, see [Speakers](#speakers) |
 | **Backlight Timer** | Off, 2, 5, 10, 15, 20 or 30 seconds, or Always On |
 | **Clicker** | The click sound and vibration on/off |
 | **Color** | White, Black or Auto (follows the phone's dark mode) |

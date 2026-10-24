@@ -76,6 +76,12 @@ public class NowPlayingScreen extends Screen {
         }
     }
 
+    /** Holding the centre button opens Speakers, to pick where the music plays. */
+    @Override
+    public void selectHold() {
+        lcd.push(lcd.host.menus().speakers());
+    }
+
     @Override
     public long frameDelay(long now) { return scrolling || mode != NORMAL ? 33 : 250; }
 
