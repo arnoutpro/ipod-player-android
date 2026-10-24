@@ -10,6 +10,7 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.media.AudioManager;
 import android.os.BatteryManager;
 import android.os.Build;
@@ -75,12 +76,24 @@ public class MainActivity extends Activity implements PlayerService.Listener {
         lcd = view.lcd;
         menus = new Menus(lcd);
         setContentView(view);
+        if (Build.VERSION.SDK_INT >= 29) {
+            // The face has its own black finish; don't let the system (or ColorOS) recolour it.
+            view.setForceDarkAllowed(false);
+            getWindow().getDecorView().setForceDarkAllowed(false);
+        }
+        applyFinish();
         goFullScreen();
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
 
         lcd.reset(menus.root());
         bindService(new Intent(this, PlayerService.class), connection, BIND_AUTO_CREATE);
         if (!hasMusicPermission()) requestMusicPermission();
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration c) {
+        super.onConfigurationChanged(c);
+        applyFinish(); // Auto follows the system's dark mode
     }
 
     @Override
@@ -234,6 +247,22 @@ public class MainActivity extends Activity implements PlayerService.Listener {
     }
 
     public void toggleBacklight() { view.toggleBacklight(); }
+
+    public static final int FINISH_WHITE = 0, FINISH_BLACK = 1, FINISH_AUTO = 2;
+
+    public int finishMode() { return prefs.getInt("finish", FINISH_WHITE); }
+
+    public void setFinishMode(int m) {
+        prefs.edit().putInt("finish", m).apply();
+        applyFinish();
+    }
+
+    private void applyFinish() {
+        int m = finishMode();
+        boolean night = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
+                == Configuration.UI_MODE_NIGHT_YES;
+        view.setFinish(m == FINISH_BLACK || (m == FINISH_AUTO && night) ? Finish.BLACK : Finish.WHITE);
+    }
 
     /** A short buzz to confirm e.g. adding a song to On-The-Go. */
     public void buzz() {

@@ -238,8 +238,20 @@ public final class Menus {
                     host.setClicker(!host.clickerOn());
                     host.redraw();
                 }));
+        items.add(item("Color")
+                .value(() -> finishLabel(host.finishMode()))
+                .onSelect(() -> {
+                    host.setFinishMode((host.finishMode() + 1) % 3);
+                    host.redraw();
+                }));
         items.add(item("Rescan Music").onSelect(host::rescan));
         return new ListScreen(lcd, "Settings", items);
+    }
+
+    static String finishLabel(int m) {
+        if (m == MainActivity.FINISH_BLACK) return "Black";
+        if (m == MainActivity.FINISH_AUTO) return "Auto";
+        return "White";
     }
 
     static String backlightLabel(int s) {
