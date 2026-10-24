@@ -1,0 +1,43 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.arnoutpro.ipod3g'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.arnoutpro.ipod3g'
+        minSdk 26
+        targetSdk 34
+        def run = (System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger()
+        versionCode run
+        versionName "1.0.${run}"
+    }
+
+    // A fixed key that lives in the repo, so every build can be installed over the
+    // previous one. Fine for a personal sideloaded app, never use it for the Play Store.
+    signingConfigs {
+        local {
+            storeFile file('ipod3g.jks')
+            storePassword 'ipod3gpass'
+            keyAlias 'ipod3g'
+            keyPassword 'ipod3gpass'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.local
+        }
+        debug {
+            signingConfig signingConfigs.local
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

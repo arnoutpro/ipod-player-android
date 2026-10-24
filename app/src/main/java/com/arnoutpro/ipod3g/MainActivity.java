@@ -1,0 +1,205 @@
+package com.arnoutpro.ipod3g;
+
+import android.Manifest;
+import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.ServiceConnection;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.media.AudioManager;
+import android.os.BatteryManager;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.Looper;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class MainActivity extends Activity implements PlayerService.Listener {
+    private static final int REQ_PERMS = 1;
+
+    private final Handler main = new Handler(Looper.getMainLooper());
+    private IPodView view;
+    private Lcd lcd;
+    private Menus menus;
+    private SharedPreferences prefs;
+    private Clicker clicker;
+    private PlayerService service;
+    private MusicLibrary library = new MusicLibrary();
+    private int battery = 100;
+    private boolean charging;
+    private boolean libraryRequested;
+
+    private final ServiceConnection connection = new ServiceConnection() {
+        @Override public void onServiceConnected(ComponentName name, IBinder b) {
+            service = ((PlayerService.LocalBinder) b).service();
+            service.addListener(MainActivity.this);
+            refreshMenu();
+        }
+
+        @Override public void onServiceDisconnected(ComponentName name) {
+            service = null;
+        }
+    };
+
+    private final BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
+        @Override public void onReceive(Context c, Intent i) {
+            int level = i.getIntExtra(BatteryManager.EXTRA_LEVEL, 100);
+            int scale = i.getIntExtra(BatteryManager.EXTRA_SCALE, 100);
+            battery = scale > 0 ? level * 100 / scale : level;
+            int st = i.getIntExtra(BatteryManager.EXTRA_STATUS, 0);
+            charging = st == BatteryManager.BATTERY_STATUS_CHARGING;
+            redraw();
+        }
+    };
+
+    @Override
+    protected void onCreate(Bundle state) {
+        super.onCreate(state);
+        prefs = getSharedPreferences("ipod", MODE_PRIVATE);
+        clicker = new Clicker();
+        view = new IPodView(this);
+        lcd = view.lcd;
+        menus = new Menus(lcd);
+        setContentView(view);
+        setVolumeControlStream(AudioManager.STREAM_MUSIC);
+
+        lcd.reset(menus.root());
+        bindService(new Intent(this, PlayerService.class), connection, BIND_AUTO_CREATE);
+        if (!hasMusicPermission()) requestMusicPermission();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Coming back from the system settings after granting access there.
+        if (!libraryRequested && hasMusicPermission()) loadLibrary();
+        registerReceiver(batteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        view.wake();
+    }
+
+    @Override
+    protected void onPause() {
+        unregisterReceiver(batteryReceiver);
+        super.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (service != null) service.removeListener(this);
+        unbindService(connection);
+        clicker.release();
+        super.onDestroy();
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public void onBackPressed() {
+        // Back behaves like MENU; at the main menu leave the app but keep the music going.
+        if (!lcd.menu()) moveTaskToBack(true);
+    }
+
+    @Override
+    public void onPlayerChanged() {
+        redraw();
+    }
+
+    // ---- library & permissions ---------------------------------------------------------------
+
+    public boolean hasMusicPermission() {
+        String p = Build.VERSION.SDK_INT >= 33 ? Manifest.permission.READ_MEDIA_AUDIO
+                : Manifest.permission.READ_EXTERNAL_STORAGE;
+        return checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    public void requestMusicPermission() {
+        int asked = prefs.getInt("permAsked", 0);
+        prefs.edit().putInt("permAsked", asked + 1).apply();
+        if (asked >= 2) {
+            // Android stops showing the dialog after two refusals; open the app's settings instead.
+            startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    android.net.Uri.fromParts("package", getPackageName(), null)));
+            return;
+        }
+        List<String> perms = new ArrayList<>();
+        if (Build.VERSION.SDK_INT >= 33) {
+            perms.add(Manifest.permission.READ_MEDIA_AUDIO);
+            perms.add(Manifest.permission.POST_NOTIFICATIONS);
+        } else {
+            perms.add(Manifest.permission.READ_EXTERNAL_STORAGE);
+        }
+        requestPermissions(perms.toArray(new String[0]), REQ_PERMS);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int code, String[] perms, int[] results) {
+        if (code == REQ_PERMS && hasMusicPermission()) {
+            lcd.reset(menus.root());
+            loadLibrary();
+        }
+    }
+
+    private void loadLibrary() {
+        libraryRequested = true;
+        new Thread(() -> {
+            MusicLibrary lib = MusicLibrary.load(getApplicationContext());
+            main.post(() -> {
+                library = lib;
+                lcd.reset(menus.root());
+            });
+        }, "library").start();
+    }
+
+    public void rescan() {
+        loadLibrary();
+    }
+
+    private void refreshMenu() {
+        if (lcd.top() != null) lcd.top().shown();
+        redraw();
+    }
+
+    // ---- things the screens need ------------------------------------------------------------
+
+    public PlayerService service() { return service; }
+
+    public MusicLibrary library() { return library; }
+
+    public SharedPreferences prefs() { return prefs; }
+
+    public Clicker clicker() { return clicker; }
+
+    public int batteryLevel() { return battery; }
+
+    public boolean isCharging() { return charging; }
+
+    public void redraw() { if (view != null) view.invalidate(); }
+
+    public boolean clickerOn() { return prefs.getBoolean("clicker", true); }
+
+    public void setClicker(boolean on) { prefs.edit().putBoolean("clicker", on).apply(); }
+
+    /** 0 = off, -1 = always on, otherwise seconds. */
+    public int backlightSeconds() { return prefs.getInt("backlight", 10); }
+
+    public void setBacklightSeconds(int s) {
+        prefs.edit().putInt("backlight", s).apply();
+        view.wake();
+    }
+
+    public void toggleBacklight() { view.toggleBacklight(); }
+
+    /** A short buzz to confirm e.g. adding a song to On-The-Go. */
+    public void buzz() {
+        Vibrator v = getSystemService(Vibrator.class);
+        if (v != null && v.hasVibrator()) v.vibrate(VibrationEffect.createOneShot(40, VibrationEffect.DEFAULT_AMPLITUDE));
+    }
+}

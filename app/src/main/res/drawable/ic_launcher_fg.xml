@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- body -->
+    <path android:fillColor="#FFF2F2EF"
+        android:pathData="M42,22 h24 a6,6 0 0 1 6,6 v52 a6,6 0 0 1 -6,6 h-24 a6,6 0 0 1 -6,-6 v-52 a6,6 0 0 1 6,-6 z" />
+    <!-- screen bezel -->
+    <path android:fillColor="#FF2B2E30"
+        android:pathData="M41,26 h26 v19 h-26 z" />
+    <!-- lcd -->
+    <path android:fillColor="#FFCAD6D7"
+        android:pathData="M42.5,27.5 h23 v16 h-23 z" />
+    <path android:fillColor="#FF2B2E30"
+        android:pathData="M42.5,31 h23 v0.8 h-23 z M44,33.5 h20 v2.6 h-20 z" />
+    <!-- buttons -->
+    <path android:fillColor="#FFFF4A26"
+        android:pathData="M43.5,50.5 m-2.2,0 a2.2,2.2 0 1 0 4.4,0 a2.2,2.2 0 1 0 -4.4,0
+                          M50.5,50.5 m-2.2,0 a2.2,2.2 0 1 0 4.4,0 a2.2,2.2 0 1 0 -4.4,0
+                          M57.5,50.5 m-2.2,0 a2.2,2.2 0 1 0 4.4,0 a2.2,2.2 0 1 0 -4.4,0
+                          M64.5,50.5 m-2.2,0 a2.2,2.2 0 1 0 4.4,0 a2.2,2.2 0 1 0 -4.4,0" />
+    <!-- wheel -->
+    <path android:fillColor="#FFDCDCD8" android:strokeColor="#FFB9B9B4" android:strokeWidth="0.8"
+        android:pathData="M54,67 m-12,0 a12,12 0 1 0 24,0 a12,12 0 1 0 -24,0" />
+    <path android:fillColor="#FFF2F2EF" android:strokeColor="#FFB9B9B4" android:strokeWidth="0.8"
+        android:pathData="M54,67 m-4.3,0 a4.3,4.3 0 1 0 8.6,0 a4.3,4.3 0 1 0 -8.6,0" />
+</vector>
