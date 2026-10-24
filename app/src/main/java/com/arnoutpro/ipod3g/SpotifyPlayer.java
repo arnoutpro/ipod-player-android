@@ -6,6 +6,14 @@ import android.os.Looper;
 import android.os.SystemClock;
 import android.provider.Settings;
 
+import com.spotify.android.appremote.api.ConnectionParams;
+import com.spotify.android.appremote.api.Connector;
+import com.spotify.android.appremote.api.PlayerApi;
+import com.spotify.android.appremote.api.SpotifyAppRemote;
+import com.spotify.android.appremote.api.error.UserNotAuthorizedException;
+import com.spotify.protocol.client.CallResult;
+import com.spotify.protocol.types.Empty;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -13,12 +21,12 @@ import org.json.JSONObject;
 import java.io.IOException;
 
 /**
- * Plays through the Spotify app on this phone, controlled with the Web API. The iPod shows what
- * Spotify reports, polled while it is the active source.
+ * Plays through the Spotify app on this phone, controlled with the Web API and woken with the App
+ * Remote SDK. The iPod shows what Spotify reports, polled while it is the active source.
  */
 public final class SpotifyPlayer implements Playback {
     private static final String SPOTIFY_APP = "com.spotify.music";
-    private static final long POLL_MS = 2000;
+    private static final long POLL_MS = 2000, CONNECT_TIMEOUT_MS = 6000;
 
     private final Spotify spotify;
     private final MainActivity host;
@@ -31,6 +39,7 @@ public final class SpotifyPlayer implements Playback {
     private long positionAt;
     private String status;
     private boolean polling, inFlight;
+    private SpotifyAppRemote remote;
 
     private final Runnable poll = new Runnable() {
         @Override public void run() {
@@ -56,28 +65,24 @@ public final class SpotifyPlayer implements Playback {
     }
 
     /**
-     * Plays a song in its playlist or album (contextUri), starting at trackUri, or from the top
-     * when trackUri is null. Wakes the Spotify
-     * app first when this phone isn't a Spotify device yet.
+     * Plays a song in its playlist or album (contextUri), starting at trackUri (which sits at
+     * index in that list), or from the top when trackUri is null.
      */
-    public void play(String contextUri, String trackUri) {
+    public void play(String contextUri, String trackUri, int index) {
         status = "Starting Spotify...";
         has = true;
         host.redraw();
+        spotify.call(this::findPhone, (device, err) -> {
+            if (err != null) fail(err);
+            else if (device != null) playOn(device, contextUri, trackUri);
+            // Spotify only lists this phone while its app is awake: wake it in the background.
+            else wake(contextUri, trackUri, index);
+        });
+    }
+
+    /** Starts the song on this phone through the Web API. */
+    private void playOn(String device, String contextUri, String trackUri) {
         spotify.call(() -> {
-            String device = findPhone();
-            boolean opened = false;
-            if (device == null) {
-                // Spotify only lists this phone once its app has been opened.
-                opened = true;
-                main.post(this::openSpotifyApp);
-                for (int i = 0; i < 15 && device == null; i++) {
-                    sleep(1000);
-                    device = findPhone();
-                }
-            }
-            if (opened) main.post(this::backToIPod);
-            if (device == null) throw new IOException("Open Spotify first");
             JSONObject body = new JSONObject();
             if (contextUri != null) {
                 body.put("context_uri", contextUri);
@@ -92,6 +97,117 @@ public final class SpotifyPlayer implements Playback {
             main.postDelayed(this::refresh, 600);
             host.redraw();
         });
+    }
+
+    /**
+     * Connects to the Spotify app with the App Remote SDK, which starts it without showing it.
+     * Once awake, the phone appears as a Spotify device and plays through the Web API, which picks
+     * the exact song even with shuffle on. Opening Spotify on screen is the last resort.
+     */
+    private void wake(String contextUri, String trackUri, int index) {
+        if (remote != null && remote.isConnected()) {
+            awake(remote, contextUri, trackUri, index);
+            return;
+        }
+        connect(false, contextUri, trackUri, index);
+    }
+
+    /**
+     * Connecting with the authorization screen allowed brings Spotify to the front, so first try
+     * without it; only the very first time, before Spotify has said yes, is it needed.
+     */
+    private void connect(boolean authView, String contextUri, String trackUri, int index) {
+        ConnectionParams params = new ConnectionParams.Builder(Spotify.CLIENT_ID)
+                .setRedirectUri(Spotify.REDIRECT)
+                .showAuthView(authView)
+                .build();
+        // Spotify sometimes never answers; don't leave the iPod waiting.
+        boolean[] answered = {false};
+        Runnable timeout = () -> {
+            if (answered[0]) return;
+            answered[0] = true;
+            openAndPlay(contextUri, trackUri);
+        };
+        main.postDelayed(timeout, CONNECT_TIMEOUT_MS);
+        SpotifyAppRemote.connect(host, params, new Connector.ConnectionListener() {
+            @Override public void onConnected(SpotifyAppRemote r) {
+                remote = r;
+                if (answered[0]) return;
+                answered[0] = true;
+                main.removeCallbacks(timeout);
+                awake(r, contextUri, trackUri, index);
+            }
+
+            @Override public void onFailure(Throwable t) {
+                if (answered[0]) return;
+                answered[0] = true;
+                main.removeCallbacks(timeout);
+                if (!authView && t instanceof UserNotAuthorizedException) {
+                    connect(true, contextUri, trackUri, index);
+                } else {
+                    openAndPlay(contextUri, trackUri);
+                }
+            }
+        });
+    }
+
+    /** Spotify is awake: wait for it to list this phone, then play the exact song there. */
+    private void awake(SpotifyAppRemote r, String contextUri, String trackUri, int index) {
+        spotify.call(() -> {
+            String device = findPhone();
+            for (int i = 0; i < 8 && device == null; i++) {
+                sleep(500);
+                device = findPhone();
+            }
+            return device;
+        }, (device, err) -> {
+            if (device != null) playOn(device, contextUri, trackUri);
+            else playRemote(r, contextUri, trackUri, index);
+        });
+    }
+
+    /** Plays through the SDK itself; its song positions follow shuffle, so only a fallback. */
+    private void playRemote(SpotifyAppRemote r, String contextUri, String trackUri, int index) {
+        PlayerApi player = r.getPlayerApi();
+        CallResult<Empty> call = contextUri != null && trackUri != null && index >= 0
+                ? player.skipToIndex(contextUri, index)
+                : player.play(contextUri != null ? contextUri : trackUri);
+        call.setResultCallback(empty -> {
+            status = null;
+            // If Spotify still came to the front while waking up, come back.
+            if (!host.isFront()) backToIPod();
+            main.postDelayed(this::refresh, 800);
+            host.redraw();
+        }).setErrorCallback(t -> openAndPlay(contextUri, trackUri));
+    }
+
+    /** The old way: open Spotify on screen until it registers, then come back and play. */
+    private void openAndPlay(String contextUri, String trackUri) {
+        spotify.call(() -> {
+            main.post(this::openSpotifyApp);
+            String device = null;
+            for (int i = 0; i < 15 && device == null; i++) {
+                sleep(1000);
+                device = findPhone();
+            }
+            main.post(this::backToIPod);
+            if (device == null) throw new IOException("Open Spotify first");
+            return device;
+        }, (device, err) -> {
+            if (err != null) fail(err);
+            else playOn(device, contextUri, trackUri);
+        });
+    }
+
+    private void fail(String err) {
+        status = err;
+        host.redraw();
+    }
+
+    /** Lets go of the Spotify app when the iPod closes. */
+    public void release() {
+        if (remote != null) SpotifyAppRemote.disconnect(remote);
+        remote = null;
     }
 
     /**

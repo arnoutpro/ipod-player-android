@@ -175,8 +175,8 @@ Lists fill in page by page, so the first rows show up within a second, even for 
 
 - Picking a song plays it within its playlist or album, so the following songs play after it.
 - The music always comes out of **this phone**, never a computer or speaker on your account.
-- If the Spotify app hasn't run yet, the iPod opens it for a second so it can register, then comes
-  back by itself.
+- If the Spotify app is asleep, the iPod wakes it in the background with Spotify's App Remote SDK,
+  without showing it. Only if that fails does it open Spotify for a second and come back by itself.
 - Now Playing shows "Spotify" in the corner, plus the song, progress, shuffle and repeat. Play/pause,
   previous, next, volume and scrubbing all work.
 - Playing your own music again switches back automatically; Spotify pauses when it loses the audio.

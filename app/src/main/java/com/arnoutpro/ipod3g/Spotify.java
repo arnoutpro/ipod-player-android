@@ -34,11 +34,13 @@ import java.util.concurrent.Executors;
  */
 public final class Spotify {
     // Not a secret: PKCE apps identify themselves with the client ID alone.
-    private static final String CLIENT_ID = "ee4a00a1e2684cf3938bdbd94f6798dc";
+    static final String CLIENT_ID = "ee4a00a1e2684cf3938bdbd94f6798dc";
     public static final String REDIRECT = "ipod3g://spotify-callback";
     private static final String SCOPES = "user-read-private playlist-read-private playlist-read-collaborative "
             + "user-library-read user-follow-read user-read-playback-state user-modify-playback-state "
-            + "user-read-currently-playing";
+            + "user-read-currently-playing "
+            // Lets the App Remote SDK wake the Spotify app without its own authorization screen.
+            + "app-remote-control";
     private static final String API = "https://api.spotify.com/v1";
     private static final String TOKEN_URL = "https://accounts.spotify.com/api/token";
     /** Stops runaway paging through enormous libraries. */

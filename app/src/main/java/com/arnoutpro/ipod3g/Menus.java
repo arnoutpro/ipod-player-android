@@ -181,7 +181,7 @@ public final class Menus {
     /** A playlist you follow: Spotify hides its songs from this app but still plays it. */
     private Screen followed(String name, String uri) {
         List<ListScreen.Item> items = new ArrayList<>();
-        items.add(item("Play Playlist").onSelect(() -> host.playSpotify(uri, null)));
+        items.add(item("Play Playlist").onSelect(() -> host.playSpotify(uri, null, -1)));
         items.add(item("Songs hidden by Spotify"));
         return new ListScreen(lcd, name, items);
     }
@@ -210,8 +210,9 @@ public final class Menus {
     /** Songs of a playlist, album or Liked Songs; picking one plays the rest of the list too. */
     private Screen spotifySongs(String title, String contextUri, String path, String empty) {
         return spotifyList(title, empty, s -> {
-            int[] local = {0};
+            int[] local = {0}, position = {0};
             List<ListScreen.Item> items = rows(s, path, null, o -> {
+                int at = position[0]++; // its place in the playlist or album, local files included
                 // Playlists wrap each song in "item" (formerly "track"); albums list them bare.
                 JSONObject t = o.optJSONObject("item");
                 if (t == null) t = o.optJSONObject("track");
@@ -222,7 +223,7 @@ public final class Menus {
                     return null;
                 }
                 if (uri.isEmpty() || uri.equals("null")) return null;
-                return item(t.optString("name")).onSelect(() -> host.playSpotify(contextUri, uri));
+                return item(t.optString("name")).onSelect(() -> host.playSpotify(contextUri, uri, at));
             });
             // Files from your own computer live in the playlist but can't be streamed.
             if (items.isEmpty() && local[0] > 0) items.add(item("Only local files"));

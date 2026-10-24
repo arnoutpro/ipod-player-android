@@ -44,6 +44,7 @@ public class MainActivity extends Activity implements PlayerService.Listener {
     /** Spotify is what Now Playing and the buttons control, until local music plays again. */
     private boolean spotifyActive;
     private String spotifyError;
+    private boolean front;
     private MusicLibrary library = new MusicLibrary();
     private int battery = 100;
     private boolean charging;
@@ -166,6 +167,7 @@ public class MainActivity extends Activity implements PlayerService.Listener {
         // Coming back from the system settings after granting access there.
         if (!libraryRequested && hasMusicPermission()) loadLibrary();
         registerReceiver(batteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        front = true;
         if (spotifyActive) spotifyPlayer.startPolling();
         view.wake();
         view.startTilt();
@@ -174,6 +176,7 @@ public class MainActivity extends Activity implements PlayerService.Listener {
     @Override
     protected void onPause() {
         unregisterReceiver(batteryReceiver);
+        front = false;
         view.stopTilt();
         spotifyPlayer.stopPolling();
         super.onPause();
@@ -184,6 +187,7 @@ public class MainActivity extends Activity implements PlayerService.Listener {
         if (service != null) service.removeListener(this);
         unbindService(connection);
         clicker.release();
+        spotifyPlayer.release();
         super.onDestroy();
     }
 
@@ -263,6 +267,9 @@ public class MainActivity extends Activity implements PlayerService.Listener {
 
     public PlayerService service() { return service; }
 
+    /** True while the iPod is on screen. */
+    public boolean isFront() { return front; }
+
     /** What Now Playing and the buttons control right now. */
     public Playback playback() { return spotifyActive ? spotifyPlayer : service; }
 
@@ -285,11 +292,14 @@ public class MainActivity extends Activity implements PlayerService.Listener {
         refreshScreen();
     }
 
-    /** Plays a Spotify song within its playlist or album and switches the iPod over to it. */
-    public void playSpotify(String contextUri, String trackUri) {
+    /**
+     * Plays a Spotify song within its playlist or album, where it sits at index, and switches the
+     * iPod over to it.
+     */
+    public void playSpotify(String contextUri, String trackUri, int index) {
         if (service != null && service.isPlayingOrLoading()) service.pause();
         spotifyActive = true;
-        spotifyPlayer.play(contextUri, trackUri);
+        spotifyPlayer.play(contextUri, trackUri, index);
         spotifyPlayer.startPolling();
         lcd.showNowPlaying();
     }
