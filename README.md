@@ -227,12 +227,14 @@ The **Speakers** menu picks where the music plays.
 
 - **This Phone:** the default. Picking it while casting brings the music back to the phone, paused
   where the speaker left off.
-- **Cast devices:** Chromecasts, Google TVs and Nest speakers on your Wi-Fi, marked "Cast". Pick one
-  and the phone's own music plays there, from the same spot, playing or paused as it was. The rest
-  of the queue follows, with shuffle, repeat, Next, Previous and scrubbing. Now Playing reads
-  "3 of 12 on *speaker*" and the wheel sets its volume. The Chromecast fetches each song from a
-  small server in the app over your Wi-Fi; every song gets a random secret address, so nothing else
-  on the network can browse your music. The equalizer doesn't apply while casting.
+- **Sonos and Cast devices:** Sonos speakers (marked "Sonos", listed per group by room name, e.g.
+  "Kitchen +1") and Chromecasts, Google TVs and Nest speakers (marked "Cast") on your Wi-Fi. Pick
+  one and the phone's own music plays there, from the same spot, playing or paused as it was. The
+  rest of the queue follows, with shuffle, repeat, Next, Previous and scrubbing. Now Playing reads
+  "3 of 12 on *speaker*" and the wheel sets its volume (for a Sonos group, the whole group's, in
+  proportion). The speaker fetches each song from a small server in the app over your Wi-Fi; every
+  song gets a random secret address, so nothing else on the network can browse your music. The
+  equalizer doesn't apply while playing on a speaker.
 - **Spotify Connect devices:** every speaker, TV, computer or web player on your Spotify account
   shows up by name. Pick one and Spotify's music moves there straight away, playing or paused as it
   was, and new Spotify songs keep playing there. Now Playing then reads "Spotify on *speaker*", and the wheel sets that
@@ -241,8 +243,10 @@ The **Speakers** menu picks where the music plays.
 - **Other Outputs:** opens Android's own output switcher for Bluetooth speakers and headphones and
   other outputs your phone supports. This works for everything, including the phone's own music.
 
-Casting uses Google's Default Media Receiver, so it needs Google Play services on the phone and
-the phone and speaker on the same Wi-Fi.
+The phone and the speaker need to be on the same Wi-Fi. Sonos speakers are found and controlled
+directly with Sonos's own network protocol, so nothing needs installing or linking. Cast devices
+use Google's Default Media Receiver, which needs Google Play services on the phone. Spotify can't
+send music to Sonos speakers from here: Spotify doesn't list them to other apps.
 
 ---
 
@@ -344,5 +348,7 @@ layout files and no image assets: everything on screen is drawn on a `Canvas`.
 | [`Spotify`](app/src/main/java/com/arnoutpro/ipod3g/Spotify.java), [`SpotifyPlayer`](app/src/main/java/com/arnoutpro/ipod3g/SpotifyPlayer.java) | Spotify sign-in (PKCE) and Web API calls; playing and controlling Spotify on this phone |
 | [`MusicLibrary`](app/src/main/java/com/arnoutpro/ipod3g/MusicLibrary.java), [`Track`](app/src/main/java/com/arnoutpro/ipod3g/Track.java) | Reads the phone's music from MediaStore and answers the Browse questions |
 | [`SpotifyLibrary`](app/src/main/java/com/arnoutpro/ipod3g/SpotifyLibrary.java) | Your Spotify library grouped by artist and album, kept in a file |
-| [`MusicServer`](app/src/main/java/com/arnoutpro/ipod3g/MusicServer.java), [`CastOptionsProvider`](app/src/main/java/com/arnoutpro/ipod3g/CastOptionsProvider.java) | Serves the current song to a Chromecast; the Cast SDK's setup |
+| [`MusicServer`](app/src/main/java/com/arnoutpro/ipod3g/MusicServer.java) | Serves the current song to a Sonos or Chromecast over Wi-Fi |
+| [`RemoteSpeaker`](app/src/main/java/com/arnoutpro/ipod3g/RemoteSpeaker.java), [`CastSpeaker`](app/src/main/java/com/arnoutpro/ipod3g/CastSpeaker.java), [`CastOptionsProvider`](app/src/main/java/com/arnoutpro/ipod3g/CastOptionsProvider.java) | A network speaker for the player; the Chromecast version and the Cast SDK's setup |
+| [`Sonos`](app/src/main/java/com/arnoutpro/ipod3g/Sonos.java), [`SonosSpeaker`](app/src/main/java/com/arnoutpro/ipod3g/SonosSpeaker.java) | Finds Sonos groups on the Wi-Fi (SSDP) and controls them over UPnP |
 | [`Clicker`](app/src/main/java/com/arnoutpro/ipod3g/Clicker.java) | The click-wheel tick, synthesised so no sound files are needed |

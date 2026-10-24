@@ -47,7 +47,9 @@ final class MusicServer {
         if (ip == null) throw new IOException("No Wi-Fi");
         song = t.uri;
         songType = mimeType(t.uri);
-        songPath = "/" + token + "/" + t.id;
+        // An extension helps speakers like Sonos tell the format from the address.
+        String ext = android.webkit.MimeTypeMap.getSingleton().getExtensionFromMimeType(songType);
+        songPath = "/" + token + "/" + t.id + (ext != null ? "." + ext : "");
         return "http://" + ip + ":" + server.getLocalPort() + songPath;
     }
 

@@ -333,6 +333,32 @@ public class MainActivity extends Activity implements PlayerService.Listener {
         main.postDelayed(() -> router.removeCallback(cb), 20_000);
     }
 
+    private List<Sonos.Group> sonos = new ArrayList<>();
+    private boolean sonosSearching;
+
+    /** The Sonos groups found last time. */
+    public List<Sonos.Group> sonosSpeakers() { return sonos; }
+
+    /** Searches the Wi-Fi for Sonos speakers (about two seconds), then calls changed. */
+    public void findSonos(Runnable changed) {
+        if (sonosSearching) return;
+        sonosSearching = true;
+        new Thread(() -> {
+            List<Sonos.Group> found;
+            try {
+                found = Sonos.discover(this);
+            } catch (java.io.IOException | RuntimeException e) {
+                found = null;
+            }
+            List<Sonos.Group> result = found;
+            main.post(() -> {
+                sonosSearching = false;
+                if (result != null) sonos = result;
+                changed.run();
+            });
+        }, "sonos-search").start();
+    }
+
     /** Plays the phone's own music on this Cast device. */
     public void castTo(androidx.mediarouter.media.MediaRouter.RouteInfo route) {
         if (router != null) router.selectRoute(route);

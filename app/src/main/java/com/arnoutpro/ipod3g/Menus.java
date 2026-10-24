@@ -127,6 +127,7 @@ public final class Menus {
             host.redraw();
         };
         host.findCastSpeakers(rebuild);
+        host.findSonos(rebuild);
         if (host.spotify().connected()) {
             SpotifyPlayer player = host.spotifyPlayer();
             host.spotify().call(player::speakers, (list, err) -> {
@@ -149,7 +150,15 @@ public final class Menus {
                     if (casting()) host.service().stopCasting();
                     host.redraw();
                 }));
-        // Cast devices play the phone's own music.
+        // Sonos groups and Cast devices play the phone's own music.
+        for (Sonos.Group g : host.sonosSpeakers()) {
+            items.add(item(g.name)
+                    .value(() -> host.service() != null && host.service().castingTo(g) ? "✓" : "Sonos")
+                    .onSelect(() -> {
+                        if (host.service() != null) host.service().castToSonos(g);
+                        host.redraw();
+                    }));
+        }
         for (androidx.mediarouter.media.MediaRouter.RouteInfo r : host.castSpeakers()) {
             items.add(item(r.getName())
                     .value(() -> r.isSelected() ? "✓" : "Cast")
