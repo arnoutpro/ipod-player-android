@@ -140,6 +140,11 @@ public final class Menus {
 
     private boolean casting() { return host.service() != null && host.service().speaker() != null; }
 
+    private void noSpotifyHere() {
+        lcd.push(new MessageScreen(lcd, "Speakers",
+                "Spotify plays only on Spotify Connect speakers. This one plays your own music."));
+    }
+
     private List<ListScreen.Item> speakerItems(List<SpotifyPlayer.Speaker> spotify) {
         SpotifyPlayer player = host.spotifyPlayer();
         List<ListScreen.Item> items = new ArrayList<>();
@@ -150,20 +155,24 @@ public final class Menus {
                     if (casting()) host.service().stopCasting();
                     host.redraw();
                 }));
-        // Sonos groups and Cast devices play the phone's own music.
+        // Sonos groups and Cast devices play the phone's own music only: Spotify streams into the
+        // Spotify app, so there is nothing to send them.
         for (Sonos.Group g : host.sonosSpeakers()) {
             items.add(item(g.name)
-                    .value(() -> host.service() != null && host.service().castingTo(g) ? "✓" : "Sonos")
+                    .value(() -> host.service() != null && host.service().castingTo(g) ? "✓"
+                            : host.spotifyPlaying() ? "No Spotify" : "Sonos")
                     .onSelect(() -> {
-                        if (host.service() != null) host.service().castToSonos(g);
+                        if (host.spotifyPlaying()) noSpotifyHere();
+                        else if (host.service() != null) host.service().castToSonos(g);
                         host.redraw();
                     }));
         }
         for (androidx.mediarouter.media.MediaRouter.RouteInfo r : host.castSpeakers()) {
             items.add(item(r.getName())
-                    .value(() -> r.isSelected() ? "✓" : "Cast")
+                    .value(() -> r.isSelected() ? "✓" : host.spotifyPlaying() ? "No Spotify" : "Cast")
                     .onSelect(() -> {
-                        host.castTo(r);
+                        if (host.spotifyPlaying()) noSpotifyHere();
+                        else host.castTo(r);
                         host.redraw();
                     }));
         }

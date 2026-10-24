@@ -244,7 +244,8 @@ there straight away.
   "3 of 12 on *speaker*" and the wheel sets its volume (for a Sonos group, the whole group's, in
   proportion). The speaker fetches each song from a small server in the app over your Wi-Fi; every
   song gets a random secret address, so nothing else on the network can browse your music. The
-  equalizer doesn't apply while playing on a speaker.
+  equalizer doesn't apply while playing on a speaker. These speakers don't take Spotify: while
+  Spotify is playing they show "No Spotify", and picking one says so instead of casting.
 - **Spotify Connect devices:** every speaker, TV, computer or web player on your Spotify account
   shows up by name. Pick one and Spotify's music moves there straight away, playing or paused as it
   was, and new Spotify songs keep playing there. Now Playing then reads "Spotify on *speaker*", and

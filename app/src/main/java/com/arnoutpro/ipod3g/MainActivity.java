@@ -299,6 +299,9 @@ public class MainActivity extends Activity implements PlayerService.Listener {
     /** What Now Playing and the buttons control right now. */
     public Playback playback() { return spotifyActive ? spotifyPlayer : service; }
 
+    /** True while Spotify, not the phone's own music, is what Now Playing and the buttons control. */
+    public boolean spotifyPlaying() { return spotifyActive; }
+
     public Spotify spotify() { return spotify; }
 
     public Menus menus() { return menus; }
