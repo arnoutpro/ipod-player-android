@@ -70,6 +70,9 @@ public class PlayerService extends Service {
     private boolean foreground;
     private boolean noisyRegistered;
     private SharedPreferences prefs;
+    // One audio session for every track, so the equalizer stays attached between songs.
+    private int audioSession;
+    private Eq eq;
 
     private final BroadcastReceiver noisy = new BroadcastReceiver() {
         @Override public void onReceive(Context c, Intent i) { pause(); }
@@ -103,6 +106,8 @@ public class PlayerService extends Service {
         shuffle = prefs.getBoolean("shuffle", false);
         repeat = prefs.getInt("repeat", REPEAT_OFF);
         audio = (AudioManager) getSystemService(AUDIO_SERVICE);
+        audioSession = audio.generateAudioSessionId();
+        eq = new Eq(prefs, audioSession);
         focusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
                 .setAudioAttributes(musicAttributes())
                 .setOnAudioFocusChangeListener(focusListener, main)
@@ -157,6 +162,7 @@ public class PlayerService extends Service {
     @Override
     public void onDestroy() {
         releasePlayer();
+        eq.release();
         abandonFocus();
         setNoisy(false);
         session.release();
@@ -164,6 +170,8 @@ public class PlayerService extends Service {
     }
 
     // ---- listeners -------------------------------------------------------------------------
+
+    public Eq eq() { return eq; }
 
     public void addListener(Listener l) { if (!listeners.contains(l)) listeners.add(l); }
 
@@ -326,6 +334,7 @@ public class PlayerService extends Service {
         player = mp;
         prepared = false;
         mp.setAudioAttributes(musicAttributes());
+        mp.setAudioSessionId(audioSession);
         mp.setWakeMode(this, PowerManager.PARTIAL_WAKE_LOCK);
         mp.setOnPreparedListener(m -> {
             if (m != player) return;

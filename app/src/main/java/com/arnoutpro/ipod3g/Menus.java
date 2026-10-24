@@ -229,6 +229,9 @@ public final class Menus {
                     if (ps != null) ps.setRepeat((ps.repeatMode() + 1) % 3);
                     host.redraw();
                 }));
+        items.add(item("EQ").arrow()
+                .value(() -> host.service() != null ? host.service().eq().label() : "")
+                .onSelect(() -> lcd.push(eq())));
         items.add(item("Backlight Timer").arrow()
                 .value(() -> backlightLabel(host.backlightSeconds()))
                 .onSelect(() -> lcd.push(backlightTimer())));
@@ -258,6 +261,22 @@ public final class Menus {
         if (s == 0) return "Off";
         if (s < 0) return "Always On";
         return s + " Seconds";
+    }
+
+    /** Settings > EQ: the bands to set by hand, then presets to start from. */
+    private Screen eq() {
+        List<ListScreen.Item> items = new ArrayList<>();
+        items.add(item("Bands").arrow().onSelect(() -> lcd.push(new EqScreen(lcd))));
+        for (int i = 0; i < Eq.PRESETS.length; i++) {
+            int p = i;
+            items.add(item(Eq.PRESETS[p])
+                    .value(() -> host.service() != null && host.service().eq().preset() == p ? "✓" : "")
+                    .onSelect(() -> {
+                        if (host.service() != null) host.service().eq().usePreset(p);
+                        host.redraw();
+                    }));
+        }
+        return new ListScreen(lcd, "EQ", items);
     }
 
     private Screen backlightTimer() {
