@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="IPodTheme" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowBackground">@android:color/white</item>
         <item name="android:statusBarColor">#FF0E0E10</item>
         <item name="android:navigationBarColor">#FF0E0E10</item>
         <item name="android:windowAnimationStyle">@null</item>

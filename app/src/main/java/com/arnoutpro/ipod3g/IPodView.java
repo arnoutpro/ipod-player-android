@@ -19,7 +19,8 @@ import android.view.View;
 /** Draws the whole iPod and turns touches on the wheel and buttons into iPod input. */
 @SuppressLint("ViewConstructor")
 public class IPodView extends View {
-    private static final float ASPECT = 1.76f;
+    /** Height of the face's content in units of {@link #bw}, without spare space. */
+    private static final float CONTENT_H = 0.07f + 0.64f + 0.07f + 0.06f + 0.18f + 0.06f + 0.72f + 0.08f;
     private static final float WHEEL_STEP_DEG = 15f;
     private static final long HOLD_MS = 650, SEEK_REPEAT_MS = 180;
     private static final int GLOW = 0xFFFF4A26, GLOW_OFF = 0xFFA9A9A4;
@@ -38,7 +39,7 @@ public class IPodView extends View {
     private final RectF body = new RectF(), bezel = new RectF();
     private final float[] btnX = new float[4];
     private float btnY, btnR, wheelX, wheelY, wheelR, centerR, bw;
-    private Shader bgShader, bodyShader, wheelShader, centerShader, btnShader, glassShader;
+    private Shader bodyShader, wheelShader, centerShader, btnShader, glassShader;
 
     // touch state
     private int target = T_NONE;
@@ -80,38 +81,40 @@ public class IPodView extends View {
 
     @Override
     protected void onSizeChanged(int w, int h, int ow, int oh) {
-        float margin = Math.min(w, h) * 0.05f;
-        bw = Math.min(w - 2 * margin, (h - 2 * margin) / ASPECT);
-        float bh = bw * ASPECT;
-        float left = (w - bw) / 2f, top = (h - bh) / 2f;
-        body.set(left, top, left + bw, top + bh);
+        // The face fills the whole screen. Everything scales with one unit, taken from the
+        // width unless the screen is too short for the stack, and spare height is shared
+        // out between the sections.
+        body.set(0, 0, w, h);
+        bw = Math.min(w, h / CONTENT_H);
+        float spare = h - bw * CONTENT_H;
+        float cx = w / 2f;
 
-        float lw = bw * 0.74f, lh = lw * Lcd.H / Lcd.W;
-        float lx = left + (bw - lw) / 2f, ly = top + bw * 0.11f;
-        lcdRect.set(Math.round(lx), Math.round(ly), Math.round(lx + lw), Math.round(ly + lh));
+        float lw = bw * 0.80f, lh = lw * Lcd.H / Lcd.W;
         float pad = bw * 0.035f;
+        float bezelTop = bw * 0.07f + spare * 0.30f;
+        float lx = cx - lw / 2f, ly = bezelTop + pad;
+        lcdRect.set(Math.round(lx), Math.round(ly), Math.round(lx + lw), Math.round(ly + lh));
         bezel.set(lcdRect.left - pad, lcdRect.top - pad, lcdRect.right + pad, lcdRect.bottom + pad);
 
-        btnR = bw * 0.085f;
-        btnY = bezel.bottom + bw * 0.05f + btnR;
-        float[] fx = {0.155f, 0.385f, 0.615f, 0.845f};
-        for (int i = 0; i < 4; i++) btnX[i] = left + bw * fx[i];
+        btnR = bw * 0.09f;
+        btnY = bezel.bottom + bw * 0.06f + spare * 0.20f + btnR;
+        float[] fx = {-1.5f, -0.5f, 0.5f, 1.5f};
+        float spacing = bw * 0.235f;
+        for (int i = 0; i < 4; i++) btnX[i] = cx + fx[i] * spacing;
 
-        wheelR = bw * 0.33f;
-        wheelX = left + bw / 2f;
-        wheelY = btnY + btnR + bw * 0.06f + wheelR;
-        centerR = bw * 0.115f;
+        wheelR = bw * 0.36f;
+        wheelX = cx;
+        wheelY = btnY + btnR + bw * 0.06f + spare * 0.15f + wheelR;
+        centerR = wheelR * 0.35f;
 
-        bgShader = new RadialGradient(w / 2f, h * 0.45f, Math.max(w, h) * 0.75f,
-                0xFF2A2A30, 0xFF050506, Shader.TileMode.CLAMP);
         bodyShader = new LinearGradient(body.left, body.top, body.right, body.bottom,
-                new int[]{0xFFFDFDFB, 0xFFF0F0ED, 0xFFDCDCD7}, new float[]{0f, 0.45f, 1f}, Shader.TileMode.CLAMP);
+                new int[]{0xFFFFFFFF, 0xFFFBFBFA, 0xFFF1F1EF}, new float[]{0f, 0.5f, 1f}, Shader.TileMode.CLAMP);
         wheelShader = new RadialGradient(wheelX, wheelY - wheelR * 0.3f, wheelR * 1.3f,
-                0xFFF3F3F0, 0xFFE0E0DB, Shader.TileMode.CLAMP);
+                0xFFFFFFFF, 0xFFF0F0EE, Shader.TileMode.CLAMP);
         centerShader = new LinearGradient(0, wheelY - centerR, 0, wheelY + centerR,
-                0xFFE4E4E0, 0xFFF8F8F6, Shader.TileMode.CLAMP);
+                0xFFF1F1EF, 0xFFFFFFFF, Shader.TileMode.CLAMP);
         btnShader = new LinearGradient(0, btnY - btnR, 0, btnY + btnR,
-                0xFFE6E6E2, 0xFFF9F9F7, Shader.TileMode.CLAMP);
+                0xFFF2F2F0, 0xFFFFFFFF, Shader.TileMode.CLAMP);
         glassShader = new LinearGradient(bezel.left, bezel.top, bezel.left + bezel.width() * 0.6f, bezel.bottom,
                 0x30FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP);
     }
@@ -122,10 +125,6 @@ public class IPodView extends View {
     protected void onDraw(Canvas c) {
         long now = System.currentTimeMillis();
         long delay = lcd.render(lit, now);
-        paint.setShader(bgShader);
-        c.drawPaint(paint);
-        paint.setShader(null);
-
         drawBody(c);
         drawScreen(c, now);
         for (int i = 0; i < 4; i++) drawButton(c, i);
@@ -138,34 +137,16 @@ public class IPodView extends View {
     }
 
     private void drawBody(Canvas c) {
-        float r = bw * 0.11f;
-        paint.setColor(0x80000000);
-        paint.setShadowLayer(bw * 0.05f, 0, bw * 0.02f, 0xC0000000);
-        c.drawRoundRect(body, r, r, paint);
-        paint.clearShadowLayer();
-
         paint.setShader(bodyShader);
-        c.drawRoundRect(body, r, r, paint);
+        c.drawRect(body, paint);
         paint.setShader(null);
-
-        // Polished edge: a light rim with a soft grey line just inside.
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(bw * 0.012f);
-        paint.setColor(0xFFC9C9C4);
-        c.drawRoundRect(body, r, r, paint);
-        RectF in = new RectF(body);
-        in.inset(bw * 0.018f, bw * 0.018f);
-        paint.setStrokeWidth(bw * 0.004f);
-        paint.setColor(0x60FFFFFF);
-        c.drawRoundRect(in, r * 0.85f, r * 0.85f, paint);
-        paint.setStyle(Paint.Style.FILL);
     }
 
     private void drawScreen(Canvas c, long now) {
         float r = bw * 0.03f;
         RectF rim = new RectF(bezel);
         rim.inset(-bw * 0.008f, -bw * 0.008f);
-        paint.setColor(0xFFCFCFCA);
+        paint.setColor(0xFFE2E2DF);
         c.drawRoundRect(rim, r * 1.3f, r * 1.3f, paint);
         paint.setColor(0xFF26292B);
         c.drawRoundRect(bezel, r, r, paint);
@@ -184,8 +165,8 @@ public class IPodView extends View {
     private void drawButton(Canvas c, int i) {
         float x = btnX[i];
         boolean down = pressed == i;
-        paint.setColor(0xFFD2D2CD);
-        c.drawCircle(x, btnY, btnR * 1.06f, paint);
+        paint.setColor(0xFFDDDDDA);
+        c.drawCircle(x, btnY, btnR * 1.05f, paint);
         paint.setShader(btnShader);
         c.drawCircle(x, btnY, btnR, paint);
         paint.setShader(null);
@@ -248,7 +229,7 @@ public class IPodView extends View {
         paint.setStrokeWidth(bw * 0.007f);
         paint.setColor(0xFFFFFFFF);
         c.drawCircle(wheelX, wheelY + bw * 0.004f, wheelR, paint);
-        paint.setColor(0xFFBDBDB8);
+        paint.setColor(0xFFD3D3CF);
         c.drawCircle(wheelX, wheelY, wheelR, paint);
         paint.setStyle(Paint.Style.FILL);
         paint.setShader(wheelShader);
@@ -262,7 +243,7 @@ public class IPodView extends View {
         paint.setStyle(Paint.Style.STROKE);
         paint.setColor(0xFFFFFFFF);
         c.drawCircle(wheelX, wheelY + bw * 0.004f, centerR, paint);
-        paint.setColor(0xFFBDBDB8);
+        paint.setColor(0xFFD3D3CF);
         c.drawCircle(wheelX, wheelY, centerR, paint);
         paint.setStyle(Paint.Style.FILL);
         paint.setShader(centerShader);
