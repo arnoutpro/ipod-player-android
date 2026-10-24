@@ -146,19 +146,12 @@ public class IPodView extends View implements SensorEventListener {
     private void buildShaders() {
         if (bw == 0) return;
         Finish f = finish;
-        bodyShader = new LinearGradient(body.left, body.top, body.right, body.bottom,
-                f.body, new float[]{0f, 0.5f, 1f}, Shader.TileMode.CLAMP);
         wheelShader = new RadialGradient(wheelX, wheelY - wheelR * 0.3f, wheelR * 1.3f,
                 f.wheelHi, f.wheelLo, Shader.TileMode.CLAMP);
         centerShader = new LinearGradient(0, wheelY - centerR, 0, wheelY + centerR,
                 f.centerTop, f.centerBottom, Shader.TileMode.CLAMP);
         btnShader = new LinearGradient(0, btnY - btnR, 0, btnY + btnR,
                 f.btnTop, f.btnBottom, Shader.TileMode.CLAMP);
-        glassShader = new LinearGradient(bezel.left, bezel.top, bezel.left + bezel.width() * 0.6f, bezel.bottom,
-                0x30FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP);
-        // A broad diagonal sheen on the acrylic surface, over everything.
-        glossShader = new LinearGradient(0, 0, body.width(), body.height() * 0.55f,
-                f.gloss, new float[]{0f, 0.3f, 0.48f, 0.56f, 0.7f}, Shader.TileMode.CLAMP);
         buildHoles();
     }
 
@@ -172,9 +165,52 @@ public class IPodView extends View implements SensorEventListener {
         wheelEdge = edgeShader(wheelX, wheelY, wheelHole);
         centerWall = wallShader(wheelX, wheelY, centerHole, 0x14);
         centerEdge = edgeShader(wheelX, wheelY, centerHole);
-        // The sheen slides the other way as the phone tilts, like a reflection.
+        buildLight();
+    }
+
+    /**
+     * The body's shading, the gloss on the acrylic and the reflection on the screen glass, all
+     * brightest on the side facing the light, and fainter the flatter the phone lies.
+     */
+    private void buildLight() {
+        Finish f = finish;
+        float k = 0.35f + 0.65f * lightTilt;
+        float cx = body.centerX(), cy = body.centerY();
+        float half = (float) Math.hypot(body.width(), body.height()) / 2f;
+        float sx = cx + lightX * half, sy = cy + lightY * half; // the edge nearest the light
+
+        bodyShader = new LinearGradient(sx, sy, cx - lightX * half, cy - lightY * half,
+                new int[]{blend(f.body[1], f.body[0], k), f.body[1], blend(f.body[1], f.body[2], k)},
+                new float[]{0f, 0.5f, 1f}, Shader.TileMode.CLAMP);
+
+        // A broad sheen across the acrylic from the light's side, sliding the other way as the
+        // phone tilts, like a reflection.
+        float len = (float) Math.hypot(body.width(), body.height() * 0.55f);
+        int[] gloss = new int[f.gloss.length];
+        for (int i = 0; i < gloss.length; i++) gloss[i] = fade(f.gloss[i], k);
+        glossShader = new LinearGradient(sx, sy, sx - lightX * len, sy - lightY * len,
+                gloss, new float[]{0f, 0.3f, 0.48f, 0.56f, 0.7f}, Shader.TileMode.CLAMP);
         glossMatrix.setTranslate(-lightX * lightTilt * bw * 0.12f, -lightY * lightTilt * bw * 0.12f);
         glossShader.setLocalMatrix(glossMatrix);
+
+        float bh = (float) Math.hypot(bezel.width(), bezel.height()) / 2f;
+        float gx = bezel.centerX() + lightX * bh, gy = bezel.centerY() + lightY * bh;
+        float glen = (float) Math.hypot(bezel.width() * 0.6f, bezel.height());
+        glassShader = new LinearGradient(gx, gy, gx - lightX * glen, gy - lightY * glen,
+                fade(0x30FFFFFF, k), 0x00FFFFFF, Shader.TileMode.CLAMP);
+    }
+
+    /** Mixes colour a towards b by t (0-1). */
+    private static int blend(int a, int b, float t) {
+        int r = Math.round(((a >> 16) & 0xFF) + (((b >> 16) & 0xFF) - ((a >> 16) & 0xFF)) * t);
+        int g = Math.round(((a >> 8) & 0xFF) + (((b >> 8) & 0xFF) - ((a >> 8) & 0xFF)) * t);
+        int bl = Math.round((a & 0xFF) + ((b & 0xFF) - (a & 0xFF)) * t);
+        return 0xFF000000 | r << 16 | g << 8 | bl;
+    }
+
+    /** The colour with its opacity scaled by k. */
+    private static int fade(int c, float k) {
+        return Math.round((c >>> 24) * k) << 24 | (c & 0xFFFFFF);
     }
 
     /** Shadow the hole's wall casts inwards, deepest on the side the light comes from. */
