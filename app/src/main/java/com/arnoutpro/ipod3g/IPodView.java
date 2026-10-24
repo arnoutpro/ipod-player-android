@@ -51,6 +51,9 @@ public class IPodView extends View {
 
     // backlight
     private boolean lit = true;
+    private boolean litAtDown = true;
+    // Turned off from the Backlight menu: stays dark until turned on there again.
+    private boolean forcedOff;
     private long lastActivity;
 
     private final Runnable holdRunnable = this::onHold;
@@ -277,6 +280,7 @@ public class IPodView extends View {
         float x = e.getX(), y = e.getY();
         switch (e.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
+                litAtDown = lit;
                 wake();
                 target = hitTest(x, y);
                 pressed = target;
@@ -417,9 +421,10 @@ public class IPodView extends View {
 
     // ---- backlight -------------------------------------------------------------------------
 
-    /** Any touch lights the backlight for the configured time. */
+    /** Any touch lights the backlight for the configured time, unless it was turned off. */
     public void wake() {
         lastActivity = System.currentTimeMillis();
+        if (forcedOff) return;
         int s = host.backlightSeconds();
         boolean was = lit;
         lit = s != 0;
@@ -429,7 +434,10 @@ public class IPodView extends View {
     }
 
     public void toggleBacklight() {
-        lit = !lit;
+        // The touch that selected the menu item already woke the light, so toggle from before it.
+        lit = !litAtDown;
+        litAtDown = lit;
+        forcedOff = !lit;
         handler.removeCallbacks(backlightCheck);
         lastActivity = System.currentTimeMillis();
         int s = host.backlightSeconds();
