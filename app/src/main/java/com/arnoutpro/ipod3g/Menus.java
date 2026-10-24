@@ -119,26 +119,45 @@ public final class Menus {
      * like Bluetooth picked in Android's own switcher (for everything the phone plays).
      */
     private Screen speakers() {
-        ListScreen s = new ListScreen(lcd, "Speakers", speakerItems(new ArrayList<>()));
+        List<List<SpotifyPlayer.Speaker>> spotify = new ArrayList<>();
+        spotify.add(new ArrayList<>());
+        ListScreen s = new ListScreen(lcd, "Speakers", speakerItems(spotify.get(0)));
+        Runnable rebuild = () -> {
+            s.setItems(speakerItems(spotify.get(0)));
+            host.redraw();
+        };
+        host.findCastSpeakers(rebuild);
         if (host.spotify().connected()) {
             SpotifyPlayer player = host.spotifyPlayer();
             host.spotify().call(player::speakers, (list, err) -> {
-                if (list != null) s.setItems(speakerItems(list));
-                host.redraw();
+                if (list != null) spotify.set(0, list);
+                rebuild.run();
             });
         }
         return s;
     }
 
+    private boolean casting() { return host.service() != null && host.service().speaker() != null; }
+
     private List<ListScreen.Item> speakerItems(List<SpotifyPlayer.Speaker> spotify) {
         SpotifyPlayer player = host.spotifyPlayer();
         List<ListScreen.Item> items = new ArrayList<>();
         items.add(item("This Phone")
-                .value(() -> player.target() == null ? "✓" : "")
+                .value(() -> player.target() == null && !casting() ? "✓" : "")
                 .onSelect(() -> {
                     player.useSpeaker(null);
+                    if (casting()) host.service().stopCasting();
                     host.redraw();
                 }));
+        // Cast devices play the phone's own music.
+        for (androidx.mediarouter.media.MediaRouter.RouteInfo r : host.castSpeakers()) {
+            items.add(item(r.getName())
+                    .value(() -> r.isSelected() ? "✓" : "Cast")
+                    .onSelect(() -> {
+                        host.castTo(r);
+                        host.redraw();
+                    }));
+        }
         for (SpotifyPlayer.Speaker sp : spotify) {
             if (sp.phone) continue;
             items.add(item(sp.name)

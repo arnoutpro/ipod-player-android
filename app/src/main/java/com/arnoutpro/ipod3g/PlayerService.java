@@ -26,6 +26,16 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
 
+import com.google.android.gms.cast.MediaInfo;
+import com.google.android.gms.cast.MediaLoadRequestData;
+import com.google.android.gms.cast.MediaSeekOptions;
+import com.google.android.gms.cast.MediaStatus;
+import com.google.android.gms.cast.framework.CastContext;
+import com.google.android.gms.cast.framework.CastSession;
+import com.google.android.gms.cast.framework.SessionManagerListener;
+import com.google.android.gms.cast.framework.media.RemoteMediaClient;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -74,6 +84,14 @@ public class PlayerService extends Service implements Playback {
     private int audioSession;
     private Eq eq;
 
+    // Casting to a Chromecast: songs play there instead, fetched from the phone by the server.
+    private CastContext cast;
+    private CastSession castSession;
+    private RemoteMediaClient remote;
+    private MusicServer server;
+    private boolean finishHandled;
+    private int pendingSeek;
+
     private final BroadcastReceiver noisy = new BroadcastReceiver() {
         @Override public void onReceive(Context c, Intent i) { pause(); }
     };
@@ -108,6 +126,15 @@ public class PlayerService extends Service implements Playback {
         audio = (AudioManager) getSystemService(AUDIO_SERVICE);
         audioSession = audio.generateAudioSessionId();
         eq = new Eq(prefs, audioSession);
+        server = new MusicServer(getContentResolver());
+        try {
+            cast = CastContext.getSharedInstance(this);
+            cast.getSessionManager().addSessionManagerListener(castListener, CastSession.class);
+            CastSession running = cast.getSessionManager().getCurrentCastSession();
+            if (running != null && running.isConnected()) startCasting(running);
+        } catch (RuntimeException e) {
+            cast = null; // no Google Play services: no casting
+        }
         focusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
                 .setAudioAttributes(musicAttributes())
                 .setOnAudioFocusChangeListener(focusListener, main)
@@ -163,6 +190,8 @@ public class PlayerService extends Service implements Playback {
     public void onDestroy() {
         releasePlayer();
         eq.release();
+        if (cast != null) cast.getSessionManager().removeSessionManagerListener(castListener, CastSession.class);
+        server.stop();
         abandonFocus();
         setNoisy(false);
         session.release();
@@ -239,7 +268,124 @@ public class PlayerService extends Service implements Playback {
 
     @Override public String album() { Track t = current(); return t == null ? "" : t.album; }
 
-    @Override public String counter() { return (pos + 1) + " of " + queue.size(); }
+    @Override public String counter() {
+        String n = (pos + 1) + " of " + queue.size();
+        return casting() ? n + " on " + speaker() : n;
+    }
+
+    // ---- casting ---------------------------------------------------------------------------
+
+    private boolean casting() { return remote != null; }
+
+    @Override public String speaker() {
+        return castSession != null && castSession.getCastDevice() != null
+                ? castSession.getCastDevice().getFriendlyName() : null;
+    }
+
+    @Override public int speakerVolume() {
+        return castSession == null ? 0 : (int) Math.round(castSession.getVolume() * 100);
+    }
+
+    @Override public void setSpeakerVolume(int percent) {
+        if (castSession == null) return;
+        try {
+            castSession.setVolume(Math.max(0, Math.min(100, percent)) / 100.0);
+        } catch (IOException | IllegalStateException ignored) { }
+        changed();
+    }
+
+    /** Stops casting and carries on on this phone. */
+    public void stopCasting() {
+        if (cast != null) cast.getSessionManager().endCurrentSession(true);
+    }
+
+    private final SessionManagerListener<CastSession> castListener = new SessionManagerListener<CastSession>() {
+        @Override public void onSessionStarted(CastSession s, String id) { startCasting(s); }
+        @Override public void onSessionResumed(CastSession s, boolean wasSuspended) { startCasting(s); }
+        @Override public void onSessionEnding(CastSession s) { castEnding(); }
+        @Override public void onSessionEnded(CastSession s, int error) { castEnded(); }
+        @Override public void onSessionSuspended(CastSession s, int reason) { castEnded(); }
+        @Override public void onSessionStarting(CastSession s) { }
+        @Override public void onSessionStartFailed(CastSession s, int error) { }
+        @Override public void onSessionResuming(CastSession s, String id) { }
+        @Override public void onSessionResumeFailed(CastSession s, int error) { }
+    };
+
+    private final RemoteMediaClient.Callback remoteCallback = new RemoteMediaClient.Callback() {
+        @Override public void onStatusUpdated() {
+            MediaStatus st = remote == null ? null : remote.getMediaStatus();
+            if (st != null && st.getPlayerState() == MediaStatus.PLAYER_STATE_IDLE
+                    && st.getIdleReason() == MediaStatus.IDLE_REASON_FINISHED && !finishHandled) {
+                finishHandled = true;
+                if (repeat == REPEAT_ONE) loadRemote(0, true);
+                else {
+                    wantPlay = true;
+                    next();
+                }
+            }
+            changed();
+        }
+    };
+
+    /** A Chromecast was picked: move the song there, at the same spot, playing or paused. */
+    private void startCasting(CastSession s) {
+        if (castSession == s && remote != null) return;
+        int at = getPosition();
+        boolean play = wantPlay;
+        releasePlayer();
+        castSession = s;
+        remote = s.getRemoteMediaClient();
+        if (remote == null) return;
+        remote.registerCallback(remoteCallback);
+        if (hasTrack()) loadRemote(at, play);
+        setNoisy(false);
+        changed();
+    }
+
+    private int castLeftAt;
+
+    private void castEnding() {
+        if (remote != null) castLeftAt = (int) remote.getApproximateStreamPosition();
+    }
+
+    /** Casting stopped: carry on on this phone from where the Chromecast was, paused. */
+    private void castEnded() {
+        if (remote == null) return;
+        remote.unregisterCallback(remoteCallback);
+        remote = null;
+        castSession = null;
+        if (hasTrack()) {
+            startTrack(false);
+            pendingSeek = castLeftAt;
+        }
+        changed();
+    }
+
+    private void loadRemote(int positionMs, boolean play) {
+        Track t = current();
+        if (t == null || remote == null) return;
+        try {
+            com.google.android.gms.cast.MediaMetadata md = new com.google.android.gms.cast.MediaMetadata(
+                    com.google.android.gms.cast.MediaMetadata.MEDIA_TYPE_MUSIC_TRACK);
+            md.putString(com.google.android.gms.cast.MediaMetadata.KEY_TITLE, t.title);
+            md.putString(com.google.android.gms.cast.MediaMetadata.KEY_ARTIST, t.artist);
+            md.putString(com.google.android.gms.cast.MediaMetadata.KEY_ALBUM_TITLE, t.album);
+            String url = server.publish(t);
+            MediaInfo info = new MediaInfo.Builder(url)
+                    .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
+                    .setContentType(server.type())
+                    .setStreamDuration(t.durationMs)
+                    .setMetadata(md)
+                    .build();
+            finishHandled = false;
+            wantPlay = play;
+            remote.load(new MediaLoadRequestData.Builder()
+                    .setMediaInfo(info).setAutoplay(play).setCurrentTime(positionMs).build());
+            if (play) goForeground(); // keeps the server running in the background
+        } catch (IOException e) {
+            stopCasting(); // no Wi-Fi: play here instead
+        }
+    }
 
     public boolean isShuffle() { return shuffle; }
 
@@ -261,13 +407,27 @@ public class PlayerService extends Service implements Playback {
 
     // ---- transport -------------------------------------------------------------------------
 
-    public boolean isPlaying() { return player != null && prepared && player.isPlaying(); }
+    public boolean isPlaying() {
+        if (casting()) return remote.isPlaying();
+        return player != null && prepared && player.isPlaying();
+    }
 
     /** True while the user wants sound, even if the track is still loading. */
     public boolean isPlayingOrLoading() { return wantPlay && hasTrack(); }
 
     public void play() {
         if (!hasTrack()) return;
+        if (casting()) {
+            wantPlay = true;
+            if (remote.getMediaStatus() == null || remote.getMediaStatus().getPlayerState() == MediaStatus.PLAYER_STATE_IDLE) {
+                loadRemote(0, true);
+            } else {
+                remote.play();
+            }
+            goForeground();
+            changed();
+            return;
+        }
         if (!requestFocus()) return;
         wantPlay = true;
         if (player != null && prepared) player.start();
@@ -279,6 +439,7 @@ public class PlayerService extends Service implements Playback {
 
     public void pause() {
         wantPlay = false;
+        if (casting()) remote.pause();
         if (player != null && prepared && player.isPlaying()) player.pause();
         setNoisy(false);
         leaveForeground();
@@ -308,15 +469,24 @@ public class PlayerService extends Service implements Playback {
     }
 
     public void seekTo(int ms) {
+        if (casting()) {
+            remote.seek(new MediaSeekOptions.Builder().setPosition(Math.max(0, Math.min(ms, getDuration()))).build());
+            changed();
+            return;
+        }
         if (player != null && prepared) {
             player.seekTo(Math.max(0, Math.min(ms, getDuration())));
             changed();
         }
     }
 
-    public int getPosition() { return player != null && prepared ? player.getCurrentPosition() : 0; }
+    public int getPosition() {
+        if (casting()) return (int) remote.getApproximateStreamPosition();
+        return player != null && prepared ? player.getCurrentPosition() : 0;
+    }
 
     public int getDuration() {
+        if (casting() && remote.getStreamDuration() > 0) return (int) remote.getStreamDuration();
         if (player != null && prepared) return player.getDuration();
         Track t = current();
         return t == null ? 0 : (int) t.durationMs;
@@ -337,8 +507,13 @@ public class PlayerService extends Service implements Playback {
         Track t = current();
         if (t == null) return;
         wantPlay = autoPlay;
-        if (autoPlay && !requestFocus()) wantPlay = false;
         bumpPlayCount(t);
+        if (casting()) {
+            loadRemote(0, autoPlay);
+            changed();
+            return;
+        }
+        if (autoPlay && !requestFocus()) wantPlay = false;
 
         MediaPlayer mp = new MediaPlayer();
         player = mp;
@@ -350,6 +525,8 @@ public class PlayerService extends Service implements Playback {
             if (m != player) return;
             prepared = true;
             consecutiveErrors = 0;
+            if (pendingSeek > 0) m.seekTo(pendingSeek);
+            pendingSeek = 0;
             if (wantPlay) m.start();
             changed();
         });

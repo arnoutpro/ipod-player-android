@@ -225,7 +225,14 @@ Sign-in uses the authorization code flow with PKCE, so the app never needs the c
 
 The **Speakers** menu picks where the music plays.
 
-- **This Phone:** the default.
+- **This Phone:** the default. Picking it while casting brings the music back to the phone, paused
+  where the speaker left off.
+- **Cast devices:** Chromecasts, Google TVs and Nest speakers on your Wi-Fi, marked "Cast". Pick one
+  and the phone's own music plays there, from the same spot, playing or paused as it was. The rest
+  of the queue follows, with shuffle, repeat, Next, Previous and scrubbing. Now Playing reads
+  "3 of 12 on *speaker*" and the wheel sets its volume. The Chromecast fetches each song from a
+  small server in the app over your Wi-Fi; every song gets a random secret address, so nothing else
+  on the network can browse your music. The equalizer doesn't apply while casting.
 - **Spotify Connect devices:** every speaker, TV, computer or web player on your Spotify account
   shows up by name. Pick one and Spotify's music moves there straight away, playing or paused as it
   was, and new Spotify songs keep playing there. Now Playing then reads "Spotify on *speaker*", and the wheel sets that
@@ -234,7 +241,8 @@ The **Speakers** menu picks where the music plays.
 - **Other Outputs:** opens Android's own output switcher for Bluetooth speakers and headphones and
   other outputs your phone supports. This works for everything, including the phone's own music.
 
-Casting the phone's own music to a Chromecast isn't supported yet.
+Casting uses Google's Default Media Receiver, so it needs Google Play services on the phone and
+the phone and speaker on the same Wi-Fi.
 
 ---
 
@@ -318,8 +326,8 @@ GITHUB_RUN_NUMBER=11 ./gradlew assembleRelease
 
 ## How it's built
 
-Plain Java and the Android framework: no external libraries, no layout files, no image assets.
-Everything on screen is drawn on a `Canvas`.
+Plain Java and the Android framework, plus Spotify's App Remote SDK and Google's Cast SDK. No
+layout files and no image assets: everything on screen is drawn on a `Canvas`.
 
 | File | What it does |
 | --- | --- |
@@ -335,4 +343,6 @@ Everything on screen is drawn on a `Canvas`.
 | [`Eq`](app/src/main/java/com/arnoutpro/ipod3g/Eq.java) | The 7-band equalizer and presets |
 | [`Spotify`](app/src/main/java/com/arnoutpro/ipod3g/Spotify.java), [`SpotifyPlayer`](app/src/main/java/com/arnoutpro/ipod3g/SpotifyPlayer.java) | Spotify sign-in (PKCE) and Web API calls; playing and controlling Spotify on this phone |
 | [`MusicLibrary`](app/src/main/java/com/arnoutpro/ipod3g/MusicLibrary.java), [`Track`](app/src/main/java/com/arnoutpro/ipod3g/Track.java) | Reads the phone's music from MediaStore and answers the Browse questions |
+| [`SpotifyLibrary`](app/src/main/java/com/arnoutpro/ipod3g/SpotifyLibrary.java) | Your Spotify library grouped by artist and album, kept in a file |
+| [`MusicServer`](app/src/main/java/com/arnoutpro/ipod3g/MusicServer.java), [`CastOptionsProvider`](app/src/main/java/com/arnoutpro/ipod3g/CastOptionsProvider.java) | Serves the current song to a Chromecast; the Cast SDK's setup |
 | [`Clicker`](app/src/main/java/com/arnoutpro/ipod3g/Clicker.java) | The click-wheel tick, synthesised so no sound files are needed |

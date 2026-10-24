@@ -46,6 +46,8 @@ public class MainActivity extends Activity implements PlayerService.Listener {
     private boolean spotifyActive;
     private String spotifyError;
     private boolean front;
+    private androidx.mediarouter.media.MediaRouter router;
+    private androidx.mediarouter.media.MediaRouteSelector castSelector;
     private MusicLibrary library = new MusicLibrary();
     private int battery = 100;
     private boolean charging;
@@ -81,6 +83,17 @@ public class MainActivity extends Activity implements PlayerService.Listener {
         spotify = new Spotify(prefs);
         spotifyPlayer = new SpotifyPlayer(spotify, this);
         spotifyLibrary = new SpotifyLibrary(spotify, getFilesDir(), this::spotifyLibraryChanged);
+        try {
+            // Started here too, so picking a Chromecast always opens a cast session.
+            com.google.android.gms.cast.framework.CastContext.getSharedInstance(this);
+            router = androidx.mediarouter.media.MediaRouter.getInstance(this);
+            castSelector = new androidx.mediarouter.media.MediaRouteSelector.Builder()
+                    .addControlCategory(com.google.android.gms.cast.CastMediaControlIntent
+                            .categoryForCast(CastOptionsProvider.RECEIVER))
+                    .build();
+        } catch (RuntimeException e) {
+            router = null; // no Google Play services: no casting
+        }
         clicker = new Clicker();
         view = new IPodView(this);
         lcd = view.lcd;
@@ -291,6 +304,39 @@ public class MainActivity extends Activity implements PlayerService.Listener {
     public SpotifyLibrary spotifyLibrary() { return spotifyLibrary; }
 
     public SpotifyPlayer spotifyPlayer() { return spotifyPlayer; }
+
+    /** Chromecasts and other Cast devices found on the network. */
+    public List<androidx.mediarouter.media.MediaRouter.RouteInfo> castSpeakers() {
+        List<androidx.mediarouter.media.MediaRouter.RouteInfo> out = new ArrayList<>();
+        if (router == null) return out;
+        for (androidx.mediarouter.media.MediaRouter.RouteInfo r : router.getRoutes()) {
+            if (!r.isDefault() && r.isEnabled() && r.matchesSelector(castSelector)) out.add(r);
+        }
+        return out;
+    }
+
+    /** Looks for Cast devices for a while, calling changed as they come and go. */
+    public void findCastSpeakers(Runnable changed) {
+        if (router == null) return;
+        androidx.mediarouter.media.MediaRouter.Callback cb = new androidx.mediarouter.media.MediaRouter.Callback() {
+            @Override public void onRouteAdded(androidx.mediarouter.media.MediaRouter r,
+                                               androidx.mediarouter.media.MediaRouter.RouteInfo route) { changed.run(); }
+            @Override public void onRouteRemoved(androidx.mediarouter.media.MediaRouter r,
+                                                 androidx.mediarouter.media.MediaRouter.RouteInfo route) { changed.run(); }
+            @Override public void onRouteChanged(androidx.mediarouter.media.MediaRouter r,
+                                                 androidx.mediarouter.media.MediaRouter.RouteInfo route) { changed.run(); }
+            @Override public void onRouteSelected(androidx.mediarouter.media.MediaRouter r,
+                                                  androidx.mediarouter.media.MediaRouter.RouteInfo route, int reason) { changed.run(); }
+        };
+        router.addCallback(castSelector, cb, androidx.mediarouter.media.MediaRouter.CALLBACK_FLAG_PERFORM_ACTIVE_SCAN);
+        // Scanning costs battery: stop after a while.
+        main.postDelayed(() -> router.removeCallback(cb), 20_000);
+    }
+
+    /** Plays the phone's own music on this Cast device. */
+    public void castTo(androidx.mediarouter.media.MediaRouter.RouteInfo route) {
+        if (router != null) router.selectRoute(route);
+    }
 
     /** Android's own picker for Bluetooth and other audio outputs of this phone. */
     public void showOutputSwitcher() {
