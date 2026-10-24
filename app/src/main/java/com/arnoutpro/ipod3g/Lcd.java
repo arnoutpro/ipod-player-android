@@ -176,7 +176,7 @@ public final class Lcd {
     }
 
     private void drawTitleBar(Canvas c, String title) {
-        PlayerService ps = host.service();
+        Playback ps = host.playback();
         // Play state indicator on the left.
         if (ps != null && ps.hasTrack()) {
             if (ps.isPlayingOrLoading()) {

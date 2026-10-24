@@ -18,7 +18,7 @@ public class NowPlayingScreen extends Screen {
     private long modeTouched;
     private int scrubPos = -1;
     private long trackSince;
-    private long lastTrackId = -1;
+    private String lastTrackKey = "";
     private boolean scrolling;
     private final AudioManager audio;
 
@@ -35,7 +35,7 @@ public class NowPlayingScreen extends Screen {
 
     @Override
     public boolean scroll(int d, long now) {
-        PlayerService ps = lcd.host.service();
+        Playback ps = lcd.host.playback();
         if (ps == null || !ps.hasTrack()) return false;
         if (mode == SCRUB) {
             int dur = ps.getDuration();
@@ -58,7 +58,7 @@ public class NowPlayingScreen extends Screen {
 
     @Override
     public void select() {
-        PlayerService ps = lcd.host.service();
+        Playback ps = lcd.host.playback();
         if (ps == null || !ps.hasTrack()) return;
         if (mode == SCRUB) {
             mode = NORMAL;
@@ -74,7 +74,7 @@ public class NowPlayingScreen extends Screen {
 
     @Override
     public void draw(Canvas c, int w, int h, long now) {
-        PlayerService ps = lcd.host.service();
+        Playback ps = lcd.host.playback();
         Paint text = lcd.text, small = lcd.small;
         scrolling = false;
         if (ps == null || !ps.hasTrack()) {
@@ -86,22 +86,20 @@ public class NowPlayingScreen extends Screen {
         if (mode == SCRUB && now - modeTouched > SCRUB_IDLE_MS) mode = NORMAL;
         if (mode != SCRUB) scrubPos = -1;
 
-        Track t = ps.current();
-        if (t.id != lastTrackId) {
-            lastTrackId = t.id;
+        if (!ps.trackKey().equals(lastTrackKey)) {
+            lastTrackKey = ps.trackKey();
             trackSince = now;
         }
 
-        String count = (ps.positionInQueue() + 1) + " of " + ps.queueSize();
-        c.drawText(count, 8, 22, small);
+        c.drawText(ps.counter(), 8, 22, small);
         drawModeIcons(c, ps, w);
 
         // Laid out for 220 px; extra height goes half above the titles and half above the bar.
         float extra = Math.max(0, h - 220);
         float base1 = 66 + extra / 2f, lh = 30;
-        boolean m1 = lcd.marquee(c, text, t.title, 8, w - 16, base1, now, trackSince);
-        boolean m2 = lcd.marquee(c, text, t.artist, 8, w - 16, base1 + lh, now, trackSince);
-        boolean m3 = lcd.marquee(c, text, t.album, 8, w - 16, base1 + 2 * lh, now, trackSince);
+        boolean m1 = lcd.marquee(c, text, ps.title(), 8, w - 16, base1, now, trackSince);
+        boolean m2 = lcd.marquee(c, text, ps.artist(), 8, w - 16, base1 + lh, now, trackSince);
+        boolean m3 = lcd.marquee(c, text, ps.album(), 8, w - 16, base1 + 2 * lh, now, trackSince);
         scrolling = m1 || m2 || m3;
 
         int dur = Math.max(1, ps.getDuration());
@@ -164,7 +162,7 @@ public class NowPlayingScreen extends Screen {
         }
     }
 
-    private void drawModeIcons(Canvas c, PlayerService ps, int w) {
+    private void drawModeIcons(Canvas c, Playback ps, int w) {
         float x = w - 10;
         if (ps.repeatMode() != PlayerService.REPEAT_OFF) {
             // A small loop; "1" next to it for repeat one.

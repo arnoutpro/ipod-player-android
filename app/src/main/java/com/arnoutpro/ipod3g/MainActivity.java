@@ -39,6 +39,11 @@ public class MainActivity extends Activity implements PlayerService.Listener {
     private SharedPreferences prefs;
     private Clicker clicker;
     private PlayerService service;
+    private Spotify spotify;
+    private SpotifyPlayer spotifyPlayer;
+    /** Spotify is what Now Playing and the buttons control, until local music plays again. */
+    private boolean spotifyActive;
+    private String spotifyError;
     private MusicLibrary library = new MusicLibrary();
     private int battery = 100;
     private boolean charging;
@@ -71,6 +76,8 @@ public class MainActivity extends Activity implements PlayerService.Listener {
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         prefs = getSharedPreferences("ipod", MODE_PRIVATE);
+        spotify = new Spotify(prefs);
+        spotifyPlayer = new SpotifyPlayer(spotify, this);
         clicker = new Clicker();
         view = new IPodView(this);
         lcd = view.lcd;
@@ -88,6 +95,33 @@ public class MainActivity extends Activity implements PlayerService.Listener {
         lcd.reset(menus.root());
         bindService(new Intent(this, PlayerService.class), connection, BIND_AUTO_CREATE);
         if (!hasMusicPermission()) requestMusicPermission();
+        handleIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleIntent(intent);
+    }
+
+    /** Spotify's login page comes back here through {@link Spotify#REDIRECT}. */
+    private void handleIntent(Intent intent) {
+        android.net.Uri data = intent == null ? null : intent.getData();
+        if (data == null || !data.toString().startsWith(Spotify.REDIRECT)) return;
+        intent.setData(null);
+        spotifyError = "Connecting...";
+        refreshScreen();
+        spotify.finishLogin(data, (r, err) -> {
+            spotifyError = err;
+            refreshScreen();
+        });
+    }
+
+    /** Rebuilds the open menu, e.g. the Spotify menu once signed in. */
+    private void refreshScreen() {
+        if (lcd.top() != null) lcd.top().shown();
+        redraw();
     }
 
     @Override
@@ -132,6 +166,7 @@ public class MainActivity extends Activity implements PlayerService.Listener {
         // Coming back from the system settings after granting access there.
         if (!libraryRequested && hasMusicPermission()) loadLibrary();
         registerReceiver(batteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        if (spotifyActive) spotifyPlayer.startPolling();
         view.wake();
         view.startTilt();
     }
@@ -140,6 +175,7 @@ public class MainActivity extends Activity implements PlayerService.Listener {
     protected void onPause() {
         unregisterReceiver(batteryReceiver);
         view.stopTilt();
+        spotifyPlayer.stopPolling();
         super.onPause();
     }
 
@@ -160,6 +196,11 @@ public class MainActivity extends Activity implements PlayerService.Listener {
 
     @Override
     public void onPlayerChanged() {
+        if (spotifyActive && service != null && service.isPlayingOrLoading()) {
+            // Local music took over (Spotify pauses itself when it loses audio focus).
+            spotifyActive = false;
+            spotifyPlayer.stopPolling();
+        }
         redraw();
     }
 
@@ -221,6 +262,37 @@ public class MainActivity extends Activity implements PlayerService.Listener {
     // ---- things the screens need ------------------------------------------------------------
 
     public PlayerService service() { return service; }
+
+    /** What Now Playing and the buttons control right now. */
+    public Playback playback() { return spotifyActive ? spotifyPlayer : service; }
+
+    public Spotify spotify() { return spotify; }
+
+    /** The last sign-in problem, shown in the Spotify menu. */
+    public String spotifyError() { return spotifyError; }
+
+    public void connectSpotify() {
+        spotifyError = null;
+        spotify.login(this);
+    }
+
+    public void disconnectSpotify() {
+        spotify.logout();
+        if (spotifyActive) {
+            spotifyActive = false;
+            spotifyPlayer.stopPolling();
+        }
+        refreshScreen();
+    }
+
+    /** Plays a Spotify song within its playlist or album and switches the iPod over to it. */
+    public void playSpotify(String contextUri, String trackUri) {
+        if (service != null && service.isPlayingOrLoading()) service.pause();
+        spotifyActive = true;
+        spotifyPlayer.play(contextUri, trackUri);
+        spotifyPlayer.startPolling();
+        lcd.showNowPlaying();
+    }
 
     public MusicLibrary library() { return library; }
 

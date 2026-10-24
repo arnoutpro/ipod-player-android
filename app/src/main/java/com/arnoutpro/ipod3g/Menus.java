@@ -2,6 +2,11 @@ package com.arnoutpro.ipod3g;
 
 import android.content.SharedPreferences;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,6 +45,7 @@ public final class Menus {
         List<ListScreen.Item> items = new ArrayList<>();
         items.add(sub("Playlists", this::playlists));
         items.add(sub("Browse", this::browse));
+        items.add(sub("Spotify", this::spotify));
         items.add(sub("Extras", this::extras));
         items.add(sub("Settings", this::settings));
         items.add(item("Shuffle Songs").onSelect(() -> {
@@ -50,8 +56,8 @@ public final class Menus {
             lcd.showNowPlaying();
         }));
         items.add(item("Backlight").onSelect(host::toggleBacklight));
-        PlayerService ps = host.service();
-        if (ps != null && ps.hasTrack()) items.add(sub("Now Playing", () -> new NowPlayingScreen(lcd)));
+        Playback pb = host.playback();
+        if (pb != null && pb.hasTrack()) items.add(sub("Now Playing", () -> new NowPlayingScreen(lcd)));
         return items;
     }
 
@@ -103,6 +109,125 @@ public final class Menus {
             }
             return items;
         }).empty("Hold Select on a song");
+    }
+
+    // ---- spotify ---------------------------------------------------------------------------
+
+    private Screen spotify() { return new ListScreen(lcd, "Spotify", this::spotifyItems); }
+
+    private List<ListScreen.Item> spotifyItems() {
+        Spotify sp = host.spotify();
+        List<ListScreen.Item> items = new ArrayList<>();
+        if (!sp.connected()) {
+            items.add(item("Connect to Spotify").arrow().onSelect(host::connectSpotify));
+            if (host.spotifyError() != null) items.add(item(host.spotifyError()));
+            return items;
+        }
+        items.add(sub("Playlists", this::spotifyPlaylists));
+        items.add(sub("Albums", this::spotifyAlbums));
+        items.add(sub("Artists", this::spotifyArtists));
+        items.add(sub("Liked Songs", () -> spotifySongs("Liked Songs",
+                "spotify:user:" + sp.userId() + ":collection", "/me/tracks", "No Liked Songs")));
+        items.add(item("Disconnect").value(sp::userName).onSelect(host::disconnectSpotify));
+        return items;
+    }
+
+    private interface Loader { List<ListScreen.Item> load(ListScreen s) throws IOException, JSONException; }
+
+    private interface Row { ListScreen.Item of(JSONObject o) throws JSONException; }
+
+    /** A list that fills in as Spotify answers; errors show where the rows would be. */
+    private Screen spotifyList(String title, String empty, Loader load) {
+        ListScreen s = new ListScreen(lcd, title, new ArrayList<>()).empty("Loading...");
+        host.spotify().call(() -> load.load(s), (items, err) -> {
+            s.empty(err != null ? err : empty);
+            if (items != null) s.setItems(items);
+            host.redraw();
+        });
+        return s;
+    }
+
+    /** Turns a paged Spotify list into rows, showing each page as soon as it arrives. */
+    private List<ListScreen.Item> rows(ListScreen s, String path, String wrapper, Row row)
+            throws IOException, JSONException {
+        List<ListScreen.Item> items = new ArrayList<>();
+        host.spotify().all(path, wrapper, page -> {
+            for (JSONObject o : page) {
+                ListScreen.Item it = row.of(o);
+                if (it != null) items.add(it);
+            }
+            List<ListScreen.Item> sofar = new ArrayList<>(items);
+            host.runOnUiThread(() -> {
+                s.setItems(sofar);
+                host.redraw();
+            });
+        });
+        return items;
+    }
+
+    private Screen spotifyPlaylists() {
+        Spotify sp = host.spotify();
+        return spotifyList("Playlists", "No Playlists", s -> rows(s, "/me/playlists", null, p -> {
+            String name = p.optString("name"), uri = p.optString("uri");
+            JSONObject owner = p.optJSONObject("owner");
+            // Spotify only lets this app read the songs of playlists you own or share.
+            boolean mine = p.optBoolean("collaborative")
+                    || owner != null && owner.optString("id").equals(sp.userId());
+            String path = "/playlists/" + p.optString("id") + "/items";
+            return sub(name, () -> mine ? spotifySongs(name, uri, path, "No Songs") : followed(name, uri));
+        }));
+    }
+
+    /** A playlist you follow: Spotify hides its songs from this app but still plays it. */
+    private Screen followed(String name, String uri) {
+        List<ListScreen.Item> items = new ArrayList<>();
+        items.add(item("Play Playlist").onSelect(() -> host.playSpotify(uri, null)));
+        items.add(item("Songs hidden by Spotify"));
+        return new ListScreen(lcd, name, items);
+    }
+
+    private Screen spotifyAlbums() {
+        return spotifyList("Albums", "No Albums", s -> rows(s, "/me/albums", null, o -> {
+            JSONObject a = o.optJSONObject("album");
+            return a == null ? null : spotifyAlbum(a);
+        }));
+    }
+
+    private ListScreen.Item spotifyAlbum(JSONObject a) {
+        String name = a.optString("name"), uri = a.optString("uri");
+        String path = "/albums/" + a.optString("id") + "/tracks";
+        return sub(name, () -> spotifySongs(name, uri, path, "No Songs"));
+    }
+
+    private Screen spotifyArtists() {
+        return spotifyList("Artists", "No Artists", s -> rows(s, "/me/following?type=artist", "artists", a -> {
+            String name = a.optString("name");
+            String path = "/artists/" + a.optString("id") + "/albums?include_groups=album,single";
+            return sub(name, () -> spotifyList(name, "No Albums", s2 -> rows(s2, path, null, this::spotifyAlbum)));
+        }));
+    }
+
+    /** Songs of a playlist, album or Liked Songs; picking one plays the rest of the list too. */
+    private Screen spotifySongs(String title, String contextUri, String path, String empty) {
+        return spotifyList(title, empty, s -> {
+            int[] local = {0};
+            List<ListScreen.Item> items = rows(s, path, null, o -> {
+                // Playlists wrap each song in "item" (formerly "track"); albums list them bare.
+                JSONObject t = o.optJSONObject("item");
+                if (t == null) t = o.optJSONObject("track");
+                if (t == null) t = o;
+                String uri = t.optString("uri");
+                if (o.optBoolean("is_local") || t.optBoolean("is_local")) {
+                    local[0]++;
+                    return null;
+                }
+                if (uri.isEmpty() || uri.equals("null")) return null;
+                return item(t.optString("name")).onSelect(() -> host.playSpotify(contextUri, uri));
+            });
+            // Files from your own computer live in the playlist but can't be streamed.
+            if (items.isEmpty() && local[0] > 0) items.add(item("Only local files"));
+            return items;
+        });
     }
 
     // ---- browse ----------------------------------------------------------------------------

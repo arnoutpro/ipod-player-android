@@ -48,6 +48,14 @@ public class ListScreen extends Screen {
 
     public ListScreen empty(String text) { emptyText = text; return this; }
 
+    /** Replaces the rows, e.g. once a list loaded in the background arrives. */
+    public void setItems(List<Item> list) {
+        items.clear();
+        items.addAll(list);
+        sel = Math.min(sel, Math.max(0, items.size() - 1));
+        clampTop();
+    }
+
     @Override
     public void shown() {
         if (source != null) {

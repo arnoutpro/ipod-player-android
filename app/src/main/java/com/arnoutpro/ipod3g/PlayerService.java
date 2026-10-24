@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.Random;
 
 /** Plays the queue in the background and exposes it to the lock screen and headsets. */
-public class PlayerService extends Service {
+public class PlayerService extends Service implements Playback {
     public static final int REPEAT_OFF = 0, REPEAT_ONE = 1, REPEAT_ALL = 2;
 
     private static final String CHANNEL = "playback";
@@ -229,7 +229,17 @@ public class PlayerService extends Service {
 
     public int queueSize() { return queue.size(); }
 
-    public boolean hasTrack() { return current() != null; }
+    @Override public boolean hasTrack() { return current() != null; }
+
+    @Override public String trackKey() { Track t = current(); return t == null ? "" : String.valueOf(t.id); }
+
+    @Override public String title() { Track t = current(); return t == null ? "" : t.title; }
+
+    @Override public String artist() { Track t = current(); return t == null ? "" : t.artist; }
+
+    @Override public String album() { Track t = current(); return t == null ? "" : t.album; }
+
+    @Override public String counter() { return (pos + 1) + " of " + queue.size(); }
 
     public boolean isShuffle() { return shuffle; }
 

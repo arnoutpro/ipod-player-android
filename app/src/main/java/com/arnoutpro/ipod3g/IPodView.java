@@ -79,7 +79,7 @@ public class IPodView extends View implements SensorEventListener {
     private final Runnable holdRunnable = this::onHold;
     private final Runnable seekRunnable = new Runnable() {
         @Override public void run() {
-            PlayerService ps = host.service();
+            Playback ps = host.playback();
             if (seekDir == 0 || ps == null) return;
             ps.seekTo(ps.getPosition() + seekDir * 5000);
             handler.postDelayed(this, SEEK_REPEAT_MS);
@@ -475,6 +475,7 @@ public class IPodView extends View implements SensorEventListener {
     }
 
     private void press(int t) {
+        Playback pb = host.playback();
         PlayerService ps = host.service();
         switch (t) {
             case T_CENTER:
@@ -487,9 +488,9 @@ public class IPodView extends View implements SensorEventListener {
                 break;
             case B_PLAY:
                 tick();
-                if (ps != null) {
-                    if (ps.hasTrack()) ps.toggle();
-                    else if (!host.library().isEmpty()) {
+                if (pb != null && pb.hasTrack()) pb.toggle();
+                else if (ps != null) {
+                    if (!host.library().isEmpty()) {
                         ps.playQueue(host.library().songs(), 0);
                         lcd.showNowPlaying();
                     }
@@ -497,11 +498,11 @@ public class IPodView extends View implements SensorEventListener {
                 break;
             case B_PREV:
                 tick();
-                if (ps != null) ps.previous();
+                if (pb != null) pb.previous();
                 break;
             case B_NEXT:
                 tick();
-                if (ps != null) ps.next();
+                if (pb != null) pb.next();
                 break;
         }
         invalidate();
@@ -509,7 +510,7 @@ public class IPodView extends View implements SensorEventListener {
 
     private void onHold() {
         holdFired = true;
-        PlayerService ps = host.service();
+        Playback ps = host.playback();
         switch (target) {
             case T_CENTER:
                 feedback(HapticFeedbackConstants.LONG_PRESS);
@@ -518,7 +519,7 @@ public class IPodView extends View implements SensorEventListener {
             case B_PLAY:
                 // Holding play/pause puts the iPod to sleep.
                 feedback(HapticFeedbackConstants.LONG_PRESS);
-                if (ps != null) ps.pause();
+                if (ps != null && ps.isPlayingOrLoading()) ps.toggle();
                 lit = false;
                 break;
             case B_PREV:
