@@ -394,28 +394,23 @@ GITHUB_RUN_NUMBER=18 ./gradlew assembleRelease
 
 ## How it's built
 
-Kotlin and Java on the Android framework, plus Spotify's App Remote SDK and Google's Cast SDK. No
+All Kotlin on the Android framework, plus Spotify's App Remote SDK and Google's Cast SDK. No
 layout files and no image assets: everything on screen is drawn on a `Canvas`.
-
-Most of the code is Kotlin now: the player, the activity, the network code (Spotify, Sonos,
-casting) and the small model classes. The drawing and menu code is still Java (`IPodView`, `Lcd`,
-`ListScreen`, `Menus`, `NowPlayingScreen`, `BrickScreen`, `ClockScreen`, `MusicLibrary`); the two
-languages call each other directly, so that can move over whenever those files change.
 
 | File | What it does |
 | --- | --- |
 | [`MainActivity`](app/src/main/java/com/arnoutpro/ipod3g/MainActivity.kt) | Full-screen activity: permissions, settings, the finish, Spotify sign-in and which player is active |
-| [`IPodView`](app/src/main/java/com/arnoutpro/ipod3g/IPodView.java) | Draws the face, acrylic and lighting; turns touches into wheel and button input; backlight and tilt sensor |
+| [`IPodView`](app/src/main/java/com/arnoutpro/ipod3g/IPodView.kt) | Draws the face, acrylic and lighting; turns touches into wheel and button input; backlight and tilt sensor |
 | [`Finish`](app/src/main/java/com/arnoutpro/ipod3g/Finish.kt) | The white and black colour palettes |
-| [`Lcd`](app/src/main/java/com/arnoutpro/ipod3g/Lcd.java) | The 320 × 292 LCD bitmap: title bar, screen stack and slide animation, fonts, marquee text |
-| [`Screen`](app/src/main/java/com/arnoutpro/ipod3g/Screen.kt), [`ListScreen`](app/src/main/java/com/arnoutpro/ipod3g/ListScreen.java) | A page on the LCD; the classic menu list with highlight, arrows and scroll bar |
-| [`Menus`](app/src/main/java/com/arnoutpro/ipod3g/Menus.java) | The whole menu tree, including the Spotify menus |
-| [`NowPlayingScreen`](app/src/main/java/com/arnoutpro/ipod3g/NowPlayingScreen.java), [`EqScreen`](app/src/main/java/com/arnoutpro/ipod3g/EqScreen.kt), [`ClockScreen`](app/src/main/java/com/arnoutpro/ipod3g/ClockScreen.java), [`BrickScreen`](app/src/main/java/com/arnoutpro/ipod3g/BrickScreen.java) | The other screens |
+| [`Lcd`](app/src/main/java/com/arnoutpro/ipod3g/Lcd.kt) | The 320 × 292 LCD bitmap: title bar, screen stack and slide animation, fonts, marquee text |
+| [`Screen`](app/src/main/java/com/arnoutpro/ipod3g/Screen.kt), [`ListScreen`](app/src/main/java/com/arnoutpro/ipod3g/ListScreen.kt) | A page on the LCD; the classic menu list with highlight, arrows and scroll bar |
+| [`Menus`](app/src/main/java/com/arnoutpro/ipod3g/Menus.kt) | The whole menu tree, including the Spotify menus |
+| [`NowPlayingScreen`](app/src/main/java/com/arnoutpro/ipod3g/NowPlayingScreen.kt), [`EqScreen`](app/src/main/java/com/arnoutpro/ipod3g/EqScreen.kt), [`ClockScreen`](app/src/main/java/com/arnoutpro/ipod3g/ClockScreen.kt), [`BrickScreen`](app/src/main/java/com/arnoutpro/ipod3g/BrickScreen.kt) | The other screens |
 | [`Playback`](app/src/main/java/com/arnoutpro/ipod3g/Playback.kt) | What Now Playing and the buttons control: local music or Spotify |
 | [`PlayerService`](app/src/main/java/com/arnoutpro/ipod3g/PlayerService.kt) | Plays local music in the background, with the queue, shuffle, repeat, notification and media session |
 | [`Eq`](app/src/main/java/com/arnoutpro/ipod3g/Eq.kt) | The 7-band equalizer and presets |
 | [`Spotify`](app/src/main/java/com/arnoutpro/ipod3g/Spotify.kt), [`SpotifyPlayer`](app/src/main/java/com/arnoutpro/ipod3g/SpotifyPlayer.kt) | Spotify sign-in (PKCE) and Web API calls; playing and controlling Spotify on this phone |
-| [`MusicLibrary`](app/src/main/java/com/arnoutpro/ipod3g/MusicLibrary.java), [`Track`](app/src/main/java/com/arnoutpro/ipod3g/Track.kt) | Reads the phone's music from MediaStore and answers the Browse questions |
+| [`MusicLibrary`](app/src/main/java/com/arnoutpro/ipod3g/MusicLibrary.kt), [`Track`](app/src/main/java/com/arnoutpro/ipod3g/Track.kt) | Reads the phone's music from MediaStore and answers the Browse questions |
 | [`SpotifyLibrary`](app/src/main/java/com/arnoutpro/ipod3g/SpotifyLibrary.kt) | Your Spotify library grouped by artist and album, kept in a file |
 | [`MusicServer`](app/src/main/java/com/arnoutpro/ipod3g/MusicServer.kt) | Serves the current song to a Sonos or Chromecast over Wi-Fi |
 | [`RemoteSpeaker`](app/src/main/java/com/arnoutpro/ipod3g/RemoteSpeaker.kt), [`CastSpeaker`](app/src/main/java/com/arnoutpro/ipod3g/CastSpeaker.kt), [`CastOptionsProvider`](app/src/main/java/com/arnoutpro/ipod3g/CastOptionsProvider.kt) | A network speaker for the player; the Chromecast version and the Cast SDK's setup |
