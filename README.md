@@ -391,8 +391,9 @@ layout files and no image assets: everything on screen is drawn on a `Canvas`.
 
 Most of the code is Java. Kotlin was added later and lives in the same folder; new and reworked
 code goes into Kotlin bit by bit, starting where it helps most, like the network code. The two call
-each other directly, so there's no hurry to convert the rest. So far only `CastOptionsProvider` is
-Kotlin.
+each other directly, so there's no hurry to convert the rest. So far `SpotifyPlayer` and
+`CastOptionsProvider` are Kotlin; `SpotifyPlayer` uses coroutines, so its start-up sequence (wake
+Spotify, wait for the phone to show up, play) reads as one straight function.
 
 | File | What it does |
 | --- | --- |
@@ -406,7 +407,7 @@ Kotlin.
 | [`Playback`](app/src/main/java/com/arnoutpro/ipod3g/Playback.java) | What Now Playing and the buttons control: local music or Spotify |
 | [`PlayerService`](app/src/main/java/com/arnoutpro/ipod3g/PlayerService.java) | Plays local music in the background, with the queue, shuffle, repeat, notification and media session |
 | [`Eq`](app/src/main/java/com/arnoutpro/ipod3g/Eq.java) | The 7-band equalizer and presets |
-| [`Spotify`](app/src/main/java/com/arnoutpro/ipod3g/Spotify.java), [`SpotifyPlayer`](app/src/main/java/com/arnoutpro/ipod3g/SpotifyPlayer.java) | Spotify sign-in (PKCE) and Web API calls; playing and controlling Spotify on this phone |
+| [`Spotify`](app/src/main/java/com/arnoutpro/ipod3g/Spotify.java), [`SpotifyPlayer`](app/src/main/java/com/arnoutpro/ipod3g/SpotifyPlayer.kt) | Spotify sign-in (PKCE) and Web API calls; playing and controlling Spotify on this phone |
 | [`MusicLibrary`](app/src/main/java/com/arnoutpro/ipod3g/MusicLibrary.java), [`Track`](app/src/main/java/com/arnoutpro/ipod3g/Track.java) | Reads the phone's music from MediaStore and answers the Browse questions |
 | [`SpotifyLibrary`](app/src/main/java/com/arnoutpro/ipod3g/SpotifyLibrary.java) | Your Spotify library grouped by artist and album, kept in a file |
 | [`MusicServer`](app/src/main/java/com/arnoutpro/ipod3g/MusicServer.java) | Serves the current song to a Sonos or Chromecast over Wi-Fi |
