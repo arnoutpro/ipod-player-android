@@ -5,7 +5,6 @@ import android.os.SystemClock
 import android.provider.Settings
 import com.spotify.android.appremote.api.ConnectionParams
 import com.spotify.android.appremote.api.Connector
-import com.spotify.android.appremote.api.PlayerApi
 import com.spotify.android.appremote.api.SpotifyAppRemote
 import com.spotify.android.appremote.api.error.UserNotAuthorizedException
 import com.spotify.protocol.client.CallResult
@@ -55,10 +54,7 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
 
             /** Plays songs from start onwards, e.g. an artist's songs or Songs A-Z. */
             @JvmStatic
-            fun songs(uris: List<String>, start: Int): Request {
-                val queue = ArrayList(uris.subList(start, minOf(uris.size, start + QUEUE_SONGS + 1)))
-                return Request(null, queue[0], -1, queue, false, true)
-            }
+            fun songs(uris: List<String>, start: Int) = Request(null, uris[start], start, uris, false, true)
 
             internal fun transfer(keepPlaying: Boolean) = Request(null, null, -1, null, true, keepPlaying)
         }
@@ -95,6 +91,21 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
     private var volume = 0
     private var volumeSetAt = 0L
 
+    /**
+     * A song list without a playlist or album behind it (All Songs, Songs A-Z). The iPod plays it
+     * one song at a time instead of filling Spotify's queue, which can't be cleared and so kept
+     * songs from earlier lists in front of new ones.
+     */
+    private var list: List<String>? = null
+    private var listIndex = 0
+    private var listSongNearEnd = false
+    private var listSongPlaying = false
+    private var listStartedAt = 0L
+    /** What Spotify calls the list's song: it may play another version (relinking), under another ID. */
+    private var listKey: String? = null
+    private var keyAtStart = ""
+    private var endCheckJob: Job? = null
+
     private var pollJob: Job? = null
     private var playJob: Job? = null
     private var volumeJob: Job? = null
@@ -120,6 +131,15 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
     fun play(rq: Request) {
         status = if (rq.transfer) "Switching speaker..." else "Starting Spotify..."
         has = true
+        if (!rq.transfer) {
+            list = rq.uris
+            listIndex = maxOf(0, rq.index)
+            listSongNearEnd = false
+            listSongPlaying = false
+            listStartedAt = SystemClock.elapsedRealtime()
+            listKey = null
+            keyAtStart = key
+        }
         host.redraw()
         playJob?.cancel()
         playJob = scope.launch { start(rq) }
@@ -254,7 +274,7 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
         host.redraw()
     }
 
-    /** Plays the first song of a list and queues the ones after it. */
+    /** Plays one song of a song list; the iPod moves through the list itself. */
     private suspend fun playSongs(r: SpotifyAppRemote, rq: Request) {
         val player = r.playerApi
         try {
@@ -265,7 +285,6 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
             return fail("Can't start Spotify")
         }
         status = null
-        scope.launch { queue(player, rq.uris.orEmpty()) }
         // The SDK plays on this phone; carry on on the chosen speaker.
         val target = targetId
         if (target != null) {
@@ -287,16 +306,57 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
         host.redraw()
     }
 
-    /** Queues one song at a time, so they keep their order. */
-    private suspend fun queue(player: PlayerApi, uris: List<String>) {
-        for (i in 1 until minOf(uris.size, QUEUE_SONGS + 1)) {
-            try {
-                player.queue(uris[i]).awaitDone()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                return
+    /** Plays song i of the current song list, or lets go of the list past its end. */
+    private fun playListAt(i: Int) {
+        val l = list ?: return
+        if (i !in l.indices) {
+            list = null
+            return
+        }
+        play(Request.songs(l, i))
+    }
+
+    /**
+     * Keeps a song list going: when the list's song ends, Spotify moves on to something else (its
+     * autoplay, or songs left in its queue) or just stops, and the iPod starts the next song from
+     * the list instead. A different song in the middle means it was picked elsewhere: the list ends.
+     */
+    private fun followList() {
+        val l = list ?: return
+        if (status != null) return // still starting
+        val grace = SystemClock.elapsedRealtime() - listStartedAt < START_GRACE_MS
+        if (listKey == null) {
+            // Spotify may still report the previous song for a moment; the first new one is ours.
+            if (key == l[listIndex] || key != keyAtStart || !grace) listKey = key else return
+        }
+        if (key == listKey) {
+            val nearEnd = duration > 0 && position >= duration - END_MARGIN_MS
+            if (!playing && listSongPlaying && (nearEnd || listSongNearEnd || position == 0)) {
+                return playListAt(listIndex + 1) // it played to the end and stopped
             }
+            listSongNearEnd = nearEnd
+            listSongPlaying = playing
+            scheduleEndCheck()
+        } else if (listSongNearEnd || (listSongPlaying && listIndex + 1 < l.size && key == l[listIndex + 1])) {
+            playListAt(listIndex + 1)
+        } else {
+            list = null
+            endCheckJob?.cancel()
+        }
+    }
+
+    /**
+     * Asks Spotify again right when the list's song is due to end, so the next one follows quickly.
+     * This also keeps the list going while the iPod is in the background and doesn't poll.
+     */
+    private fun scheduleEndCheck() {
+        endCheckJob?.cancel()
+        if (!playing || duration <= 0) return
+        val left = duration - getPosition()
+        endCheckJob = scope.launch {
+            delay(left.toLong() + 400)
+            listSongNearEnd = true
+            refresh()
         }
     }
 
@@ -488,6 +548,7 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
             "context" -> PlayerService.REPEAT_ALL
             else -> PlayerService.REPEAT_OFF
         }
+        followList()
     }
 
     private fun command(method: String, path: String) {
@@ -554,7 +615,14 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
         command("PUT", if (playing) "/me/player/play" else "/me/player/pause")
     }
 
-    override fun next() = command("POST", "/me/player/next")
+    override fun next() {
+        val l = list
+        if (l != null) {
+            if (listIndex + 1 < l.size) playListAt(listIndex + 1)
+            return
+        }
+        command("POST", "/me/player/next")
+    }
 
     /**
      * Like the iPod: after the first few seconds ⏮ restarts the song, before that it goes back. On
@@ -562,6 +630,7 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
      */
     override fun previous() {
         if (getPosition() > 3000) return seekNow(0)
+        if (list != null) return if (listIndex > 0) playListAt(listIndex - 1) else seekNow(0)
         scope.launch {
             try {
                 io { spotify.send("POST", "/me/player/previous", null) }
@@ -598,7 +667,9 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
         const val SPOTIFY_APP = "com.spotify.music"
         const val POLL_MS = 2000L
         const val CONNECT_TIMEOUT_MS = 6000L
-        const val QUEUE_SONGS = 30
+        /** A song this close to its end counts as finished when Spotify moves on. */
+        const val END_MARGIN_MS = 8000
+        const val START_GRACE_MS = 5000L
 
         /** Runs a network call off the main thread. */
         suspend fun <T> io(block: () -> T): T = withContext(Dispatchers.IO) { block() }

@@ -213,8 +213,12 @@ first load takes a while for a big library, but songs appear as they come in.
 
 **Playing**
 
-Pick a song in a playlist or album and it plays from there, with the rest of the list after it. In
-All Songs and Songs, the next 30 songs are queued.
+Pick a song in a playlist or album and it plays from there, with the rest of the list after it. All
+Songs and Songs have no Spotify playlist behind them, so the iPod plays those itself, one song at a
+time: Next and Previous follow the list, and when a song ends the next one starts. It doesn't use
+Spotify's queue, because Spotify can't clear it and old songs would end up in front of new ones.
+If your queue still has songs from before, clear it once in the Spotify app; otherwise one of them
+can play for a second or two between songs.
 
 The music comes out of this phone unless you choose a speaker under [Speakers](#speakers). That's
 on purpose: Spotify likes to play on whatever device was active last, and during testing that
