@@ -1,5 +1,7 @@
 # iPod 3G Player
 
+*Serene listening, the way it used to feel.*
+
 A music player for Android that looks and works like the **3rd generation iPod** from 2003.
 It has the grey-blue LCD with its pixel font, the four red-lit touch buttons and the touch wheel,
 under a clear acrylic layer. It plays the music on your phone and, if you like, your Spotify
@@ -18,8 +20,40 @@ on the Play Store.
 
 ---
 
+## Why
+
+Modern music apps want your attention. They show feeds, suggestions, notifications, videos and
+banners, and put a new screen in front of you every time you go looking for a song. Somewhere
+along the way, listening to music became one more thing to scroll through.
+
+The iPod got this right. It did one thing: you picked an album, turned the wheel, pressed play,
+and that was it. There was nothing else on the screen to pull you away.
+
+This app brings that back. It's made for **serene listening sessions with no distractions from
+the app**: no feed, no recommendations, no ads, nothing competing for your attention. What you
+get is the **look and feel of the 3rd generation iPod**, down to the click of the wheel and the
+glow of the buttons, for that vintage experience.
+
+It isn't a museum piece, though. Under the old face it has the things you'd miss today: your
+**Spotify** library browsed like an iPod, music sent to your **Sonos** speakers or a **Chromecast**,
+Spotify Connect, a 7-band equalizer, and a dark finish for the evening.
+
+### Who it's for
+
+- **Anyone who wants to just listen:** put on an album and let it play, without the app asking
+  for anything.
+- **iPod nostalgics:** people who remember the wheel, the pixel font and the satisfying click,
+  and miss how simple it felt.
+- **Vintage tech lovers:** if you like the feel of old hardware, this is a 2003 iPod you carry on
+  today's phone.
+- **Spotify and Sonos households:** keep your streaming library and your speakers, but control
+  them from something calmer than the usual apps.
+
+---
+
 ## Contents
 
+- [Why](#why)
 - [Install](#install)
 - [The face](#the-face)
 - [Controls](#controls)
