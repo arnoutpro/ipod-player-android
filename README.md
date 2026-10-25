@@ -109,7 +109,7 @@ There are two finishes: the original white, and a black one that Apple never mad
 | **Wheel** | Scroll through menus. Spins faster through long lists. On Now Playing it sets the volume. |
 | **Centre button** | Select. On Now Playing it switches the wheel to scrubbing through the song. |
 | **Hold centre on Now Playing** | Open Speakers, to pick where the music plays. |
-| **Hold centre on a song** | Add it to the On-The-Go playlist (you'll feel a short buzz). |
+| **Hold centre on a song** | Your own songs: add it to the On-The-Go playlist. Spotify songs: start its radio. You'll feel a short buzz. |
 | **MENU** | Back one level. The phone's back gesture does the same. |
 | **⏮ / ⏭** | Previous / next song. Hold to rewind / fast-forward. |
 | **▶❙❙** | Play / pause. Hold for 2 seconds to sleep: the music pauses and the backlight turns off. |
@@ -200,8 +200,8 @@ Your Liked Songs, saved albums and followed artists are grouped like the iPod's 
 
 - **Playlists:** your own and the ones you follow.
 - **Artists:** everyone in your Liked Songs and saved albums, plus the artists you follow. Each
-  one has All Songs, their albums in your library, and More on Spotify for the rest of their
-  albums and singles.
+  one has Start Radio, All Songs, their albums in your library, and More on Spotify for the rest
+  of their albums and singles.
 - **Albums:** your saved albums, plus the albums your liked songs come from. A saved album shows
   every song; any other album shows just the ones you liked.
 - **Songs:** all your liked songs, A–Z.
@@ -219,6 +219,14 @@ time: Next and Previous follow the list, and when a song ends the next one start
 Spotify's queue, because Spotify can't clear it and old songs would end up in front of new ones.
 If your queue still has songs from before, clear it once in the Spotify app; otherwise one of them
 can play for a second or two between songs.
+
+**Radio**
+
+Spotify's own radio, an endless mix of songs like the one you start from. Pick **Start Radio** on
+an artist, or hold the centre button on any Spotify song. Spotify chooses the songs as they play,
+so there's no list to scroll; Next skips ahead. The radio plays through the Spotify app itself
+(Spotify's Web API no longer offers radio to new apps), and follows the speaker you chose like
+everything else.
 
 The music comes out of this phone unless you choose a speaker under [Speakers](#speakers). That's
 on purpose: Spotify likes to play on whatever device was active last, and during testing that

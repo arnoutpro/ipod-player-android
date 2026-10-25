@@ -35,7 +35,7 @@ import kotlin.coroutines.resumeWithException
  */
 class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity) : Playback {
 
-    /** What to play: a song within a playlist or album, or a plain list of songs. */
+    /** What to play: a song within a playlist or album, a plain list of songs, or a radio. */
     class Request private constructor(
         internal val contextUri: String?,
         internal val trackUri: String?,
@@ -45,6 +45,8 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
         internal val transfer: Boolean,
         /** For a transfer: keep playing there, or arrive paused. */
         internal val keepPlaying: Boolean,
+        /** Spotify's own radio: a station link only the Spotify app itself can play. */
+        internal val radio: Boolean = false,
     ) {
         companion object {
             /** trackUri sits at index in the playlist or album; null plays it from the top. */
@@ -55,6 +57,11 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
             /** Plays songs from start onwards, e.g. an artist's songs or Songs A-Z. */
             @JvmStatic
             fun songs(uris: List<String>, start: Int) = Request(null, uris[start], start, uris, false, true)
+
+            /** Spotify's radio of songs like this artist or song (a spotify:artist: or spotify:track: link). */
+            @JvmStatic
+            fun radio(uri: String) =
+                Request(null, "spotify:station:" + uri.removePrefix("spotify:"), -1, null, false, true, true)
 
             internal fun transfer(keepPlaying: Boolean) = Request(null, null, -1, null, true, keepPlaying)
         }
@@ -153,7 +160,7 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
     private suspend fun start(rq: Request) {
         // Spotify accepts a plain list of songs over the Web API but then plays nothing, so lists
         // always go through the App Remote connection.
-        if (rq.uris == null) {
+        if (rq.uris == null && !rq.radio) {
             val device = try {
                 io { findTarget() }
             } catch (e: IOException) {
@@ -163,6 +170,9 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
             }
             if (device != null) return playOn(device, rq)
         }
+
+        // The Web API doesn't take station links; the App Remote SDK passes them to Spotify.
+        if (rq.radio) return playSongs(connectRemote() ?: return fail("Can't start radio"), rq)
 
         val r = connectRemote() ?: return openAndPlay(rq)
         if (rq.uris != null) return playSongs(r, rq)
@@ -274,7 +284,7 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
         host.redraw()
     }
 
-    /** Plays one song of a song list; the iPod moves through the list itself. */
+    /** Plays one song of a song list (the iPod moves through the list itself), or a radio. */
     private suspend fun playSongs(r: SpotifyAppRemote, rq: Request) {
         val player = r.playerApi
         try {
@@ -282,7 +292,7 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            return fail("Can't start Spotify")
+            return fail(if (rq.radio) "Can't start radio" else "Can't start Spotify")
         }
         status = null
         // The SDK plays on this phone; carry on on the chosen speaker.

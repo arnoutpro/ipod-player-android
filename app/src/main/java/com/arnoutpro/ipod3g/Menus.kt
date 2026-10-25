@@ -206,7 +206,7 @@ class Menus(private val lcd: Lcd) {
                     // Spotify's own order, played as Liked Songs so it carries on through all of them.
                     val liked = "spotify:user:" + sp.userId() + ":collection"
                     lib.get().liked.mapIndexed { at, song ->
-                        item(song.name).onSelect { host.playSpotify(SpotifyPlayer.Request.inContext(liked, song.uri, at)) }
+                        spotifySong(song.name, song.uri, SpotifyPlayer.Request.inContext(liked, song.uri, at))
                     }
                 }
             }
@@ -226,9 +226,10 @@ class Menus(private val lcd: Lcd) {
         return s.empty(if (lib.loading()) "Loading..." else none)
     }
 
-    /** An artist: their songs, their albums, and more of their albums straight from Spotify. */
+    /** An artist: their radio, songs, albums, and more of their albums straight from Spotify. */
     private fun spotifyArtist(a: SpotifyLibrary.Artist): Screen {
         val items = ArrayList<ListScreen.Item>()
+        a.id?.let { id -> items.add(item("Start Radio").onSelect { radio("spotify:artist:$id") }) }
         if (a.songs.isNotEmpty()) items.add(sub("All Songs") { ListScreen(lcd, a.name, songRows(a.songs)) })
         for (al in a.albums) items.add(sub(al.name) { spotifyAlbum(al) })
         a.id?.let { id ->
@@ -243,16 +244,24 @@ class Menus(private val lcd: Lcd) {
         lcd, al.name,
         al.songs.map { song ->
             val at = if (song.disc == 1) song.track - 1 else -1 // its place on the album
-            item(song.name).onSelect { host.playSpotify(SpotifyPlayer.Request.inContext(al.uri, song.uri, at)) }
+            spotifySong(song.name, song.uri, SpotifyPlayer.Request.inContext(al.uri, song.uri, at))
         },
     )
 
     /** Songs without a playlist or album around them: picking one plays it and the ones after. */
     private fun songRows(songs: List<SpotifyLibrary.Song>): List<ListScreen.Item> {
         val uris = songs.map { it.uri }
-        return songs.mapIndexed { at, song ->
-            item(song.name).onSelect { host.playSpotify(SpotifyPlayer.Request.songs(uris, at)) }
-        }
+        return songs.mapIndexed { at, song -> spotifySong(song.name, song.uri, SpotifyPlayer.Request.songs(uris, at)) }
+    }
+
+    /** A Spotify song row: select plays it, holding the centre button starts its radio. */
+    private fun spotifySong(name: String, uri: String, play: SpotifyPlayer.Request) =
+        item(name).onSelect { host.playSpotify(play) }.onHold { radio(uri) }
+
+    /** Plays Spotify's radio for an artist or song link. */
+    private fun radio(uri: String) {
+        host.buzz()
+        host.playSpotify(SpotifyPlayer.Request.radio(uri))
     }
 
     /** A list that fills in as Spotify answers; errors show where the rows would be. */
@@ -327,7 +336,7 @@ class Menus(private val lcd: Lcd) {
                 } else if (uri.isEmpty() || uri == "null") {
                     null
                 } else {
-                    item(t.optString("name")).onSelect { host.playSpotify(SpotifyPlayer.Request.inContext(contextUri, uri, at)) }
+                    spotifySong(t.optString("name"), uri, SpotifyPlayer.Request.inContext(contextUri, uri, at))
                 }
             }
             // Files from your own computer live in the playlist but can't be streamed.
