@@ -578,7 +578,10 @@ public final class Menus {
         }
         String v = version;
         items.add(item("Version").value(() -> v));
-        items.add(item("Made by").value(() -> "Arnout van der Elst"));
+        // Selecting it opens the maker's GitHub page.
+        items.add(item("Made by").value(() -> "@arnoutpro").onSelect(() ->
+                host.startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,
+                        android.net.Uri.parse("https://github.com/arnoutpro")))));
         return new ListScreen(lcd, "About", items);
     }
 }
