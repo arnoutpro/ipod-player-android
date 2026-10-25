@@ -301,7 +301,7 @@ won't send music to a Sonos from here, because Spotify doesn't list Sonos speake
 
 | Setting | What it does |
 | --- | --- |
-| **About** | Number of songs, artists and albums, and the version |
+| **About** | Number of songs, artists and albums, the version (e.g. 1.0.25), and Made by, which opens a page with the arnout.pro brand mark; its centre button opens the maker's GitHub |
 | **Shuffle** | Off / Songs |
 | **Repeat** | Off / One / All |
 | **EQ** | The equalizer, see [above](#equalizer) |
@@ -391,8 +391,8 @@ layout files and no image assets: everything on screen is drawn on a `Canvas`.
 
 Most of the code is Java. Kotlin was added later and lives in the same folder; new and reworked
 code goes into Kotlin bit by bit, starting where it helps most, like the network code. The two call
-each other directly, so there's no hurry to convert the rest. So far `SpotifyPlayer` and
-`CastOptionsProvider` are Kotlin; `SpotifyPlayer` uses coroutines, so its start-up sequence (wake
+each other directly, so there's no hurry to convert the rest. So far `SpotifyPlayer`,
+`CastOptionsProvider` and `MakerScreen` are Kotlin; `SpotifyPlayer` uses coroutines, so its start-up sequence (wake
 Spotify, wait for the phone to show up, play) reads as one straight function.
 
 | File | What it does |

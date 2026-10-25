@@ -578,10 +578,9 @@ public final class Menus {
         }
         String v = version;
         items.add(item("Version").value(() -> v));
-        // Selecting it opens the maker's GitHub page.
-        items.add(item("Made by").value(() -> "@arnoutpro").onSelect(() ->
-                host.startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,
-                        android.net.Uri.parse("https://github.com/arnoutpro")))));
+        // Opens the arnout.pro page with the brand mark.
+        items.add(item("Made by").value(() -> "@arnoutpro").arrow()
+                .onSelect(() -> lcd.push(new MakerScreen(lcd, v))));
         return new ListScreen(lcd, "About", items);
     }
 }
