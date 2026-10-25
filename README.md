@@ -288,6 +288,10 @@ there straight away.
 - **Other Outputs:** opens Android's own output switcher for Bluetooth speakers and headphones and
   other outputs your phone supports. This works for everything, including the phone's own music.
 
+**Volume:** while the music plays on a Sonos, Cast or Spotify Connect speaker, both the wheel on Now
+Playing and the phone's volume buttons set that speaker's volume, in steps of 5%. The volume buttons
+do this while the iPod is on screen; with the app in the background they control the phone as usual.
+
 The phone and the speaker need to be on the same Wi-Fi. Sonos speakers are found and controlled
 directly with Sonos's own network protocol, so nothing needs installing or linking. Cast devices
 use Google's Default Media Receiver, which needs Google Play services on the phone. Spotify can't
