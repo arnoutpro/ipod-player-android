@@ -253,7 +253,7 @@ The app ships with the author's Client ID. To use your own (for example to add y
 1. Create an app at [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard)
    with the redirect URI `ipod3g://spotify-callback`, and tick **Web API** and **Android**.
 2. Put its Client ID in `CLIENT_ID` in
-   [`Spotify.java`](app/src/main/java/com/arnoutpro/ipod3g/Spotify.java) and build.
+   [`Spotify.kt`](app/src/main/java/com/arnoutpro/ipod3g/Spotify.kt) and build.
 
 Sign-in uses the authorization code flow with PKCE, so the app never needs the client secret.
 
