@@ -4,7 +4,7 @@ package com.arnoutpro.ipod3g;
  * A speaker on the network that plays the phone's own music, fetching each song from
  * {@link MusicServer}: a Chromecast or a Sonos group.
  */
-interface RemoteSpeaker {
+public interface RemoteSpeaker {
     interface Listener {
         /** Something worth redrawing changed. */
         void onChanged();

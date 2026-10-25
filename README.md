@@ -399,8 +399,9 @@ layout files and no image assets: everything on screen is drawn on a `Canvas`.
 
 Most of the code is Java. Kotlin was added later and lives in the same folder; new and reworked
 code goes into Kotlin bit by bit, starting where it helps most, like the network code. The two call
-each other directly, so there's no hurry to convert the rest. So far the Spotify code
-(`Spotify`, `SpotifyLibrary`, `SpotifyPlayer`), `CastOptionsProvider` and `MakerScreen` are Kotlin; `SpotifyPlayer` uses coroutines, so its start-up sequence (wake
+each other directly, so there's no hurry to convert the rest. So far all the network
+code is Kotlin (`Spotify`, `SpotifyLibrary`, `SpotifyPlayer`, `Sonos`, `SonosSpeaker`, `MusicServer`),
+plus `CastOptionsProvider` and `MakerScreen`; `SpotifyPlayer` uses coroutines, so its start-up sequence (wake
 Spotify, wait for the phone to show up, play) reads as one straight function.
 
 | File | What it does |
@@ -418,7 +419,7 @@ Spotify, wait for the phone to show up, play) reads as one straight function.
 | [`Spotify`](app/src/main/java/com/arnoutpro/ipod3g/Spotify.kt), [`SpotifyPlayer`](app/src/main/java/com/arnoutpro/ipod3g/SpotifyPlayer.kt) | Spotify sign-in (PKCE) and Web API calls; playing and controlling Spotify on this phone |
 | [`MusicLibrary`](app/src/main/java/com/arnoutpro/ipod3g/MusicLibrary.java), [`Track`](app/src/main/java/com/arnoutpro/ipod3g/Track.java) | Reads the phone's music from MediaStore and answers the Browse questions |
 | [`SpotifyLibrary`](app/src/main/java/com/arnoutpro/ipod3g/SpotifyLibrary.kt) | Your Spotify library grouped by artist and album, kept in a file |
-| [`MusicServer`](app/src/main/java/com/arnoutpro/ipod3g/MusicServer.java) | Serves the current song to a Sonos or Chromecast over Wi-Fi |
+| [`MusicServer`](app/src/main/java/com/arnoutpro/ipod3g/MusicServer.kt) | Serves the current song to a Sonos or Chromecast over Wi-Fi |
 | [`RemoteSpeaker`](app/src/main/java/com/arnoutpro/ipod3g/RemoteSpeaker.java), [`CastSpeaker`](app/src/main/java/com/arnoutpro/ipod3g/CastSpeaker.java), [`CastOptionsProvider`](app/src/main/java/com/arnoutpro/ipod3g/CastOptionsProvider.kt) | A network speaker for the player; the Chromecast version and the Cast SDK's setup |
-| [`Sonos`](app/src/main/java/com/arnoutpro/ipod3g/Sonos.java), [`SonosSpeaker`](app/src/main/java/com/arnoutpro/ipod3g/SonosSpeaker.java) | Finds Sonos groups on the Wi-Fi (SSDP) and controls them over UPnP |
+| [`Sonos`](app/src/main/java/com/arnoutpro/ipod3g/Sonos.kt), [`SonosSpeaker`](app/src/main/java/com/arnoutpro/ipod3g/SonosSpeaker.kt) | Finds Sonos groups on the Wi-Fi (SSDP) and controls them over UPnP |
 | [`Clicker`](app/src/main/java/com/arnoutpro/ipod3g/Clicker.java) | The click-wheel tick, synthesised so no sound files are needed |
