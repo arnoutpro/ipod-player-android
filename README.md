@@ -76,7 +76,7 @@ your settings, playlists and Spotify sign-in.
 - Playing on Sonos or Chromecast needs the phone and speaker on the same Wi-Fi; Chromecast also
   needs Google Play services.
 
-The APK is about 4 MB, mostly Google's Cast libraries.
+The APK is about 1.4 MB.
 
 ---
 
@@ -380,7 +380,11 @@ GITHUB_RUN_NUMBER=18 ./gradlew assembleRelease
 - **Kotlin:** the Kotlin Android plugin is 2.2.21. The Cast SDK is built with Kotlin 2.2, so an
   older Kotlin can't read it. The Kotlin standard library was already in the app through the Cast
   SDK, so Kotlin added only about 35 KB.
-- The build may print warnings about Kotlin metadata from the Cast SDK; they're harmless.
+- **Shrinking:** release builds run R8, which cut the APK from 4.6 MB to 1.4 MB, mostly unused
+  parts of the Cast SDK. The rules are in `app/proguard-rules.pro`. Names are kept, so crash logs
+  stay readable. If you add a class that's only named in the manifest or found by reflection, it
+  needs a keep rule there, like `CastOptionsProvider`.
+- The build may print warnings about Kotlin metadata from the Cast SDK and R8; they're harmless.
 
 ---
 

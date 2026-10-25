@@ -29,7 +29,10 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            // R8 drops unused code from the app and its libraries, mostly the Cast SDK.
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.local
         }
         debug {
