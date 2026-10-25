@@ -41,6 +41,7 @@ public final class Lcd {
     private long slideStart;
 
     public int bg = BG_LIT;
+    private final Path playIcon = new Path();
 
     public Lcd(MainActivity host) {
         this.host = host;
@@ -180,7 +181,8 @@ public final class Lcd {
         // Play state indicator on the left.
         if (ps != null && ps.hasTrack()) {
             if (ps.isPlayingOrLoading()) {
-                Path tri = new Path();
+                Path tri = playIcon;
+                tri.reset();
                 tri.moveTo(8, 10);
                 tri.lineTo(20, 17);
                 tri.lineTo(8, 24);

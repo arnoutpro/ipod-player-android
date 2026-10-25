@@ -4,7 +4,6 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.RectF;
 import android.media.AudioManager;
 
 import java.util.Locale;
@@ -21,6 +20,9 @@ public class NowPlayingScreen extends Screen {
     private String lastTrackKey = "";
     private boolean scrolling;
     private final AudioManager audio;
+    // Reused while drawing, so a frame creates no garbage.
+    private final Path path = new Path();
+    private final Paint bgPaint = new Paint();
 
     public NowPlayingScreen(Lcd lcd) {
         super(lcd, "Now Playing");
@@ -48,18 +50,29 @@ public class NowPlayingScreen extends Screen {
         }
         mode = VOLUME;
         modeTouched = now;
-        if (ps.speaker() != null) {
-            // Playing on another speaker: set its own volume, not the phone's.
-            int nv = Math.max(0, Math.min(100, ps.speakerVolume() + d * 5));
-            if (nv == ps.speakerVolume()) return false;
-            ps.setSpeakerVolume(nv);
-            return true;
-        }
+        if (ps.speaker() != null) return speakerVolume(ps, d);
         int max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
         int vol = audio.getStreamVolume(AudioManager.STREAM_MUSIC);
         int nv = Math.max(0, Math.min(max, vol + d));
         if (nv == vol) return false;
         audio.setStreamVolume(AudioManager.STREAM_MUSIC, nv, 0);
+        return true;
+    }
+
+    /** The phone's volume buttons while playing on a speaker: show the bar and set its volume. */
+    public void volumeKey(int d) {
+        Playback ps = lcd.host.playback();
+        if (ps == null || ps.speaker() == null) return;
+        mode = VOLUME;
+        modeTouched = System.currentTimeMillis();
+        speakerVolume(ps, d);
+    }
+
+    /** Playing on another speaker: set its own volume, not the phone's. */
+    static boolean speakerVolume(Playback ps, int d) {
+        int nv = Math.max(0, Math.min(100, ps.speakerVolume() + d * 5));
+        if (nv == ps.speakerVolume()) return false;
+        ps.setSpeakerVolume(nv);
         return true;
     }
 
@@ -142,11 +155,11 @@ public class NowPlayingScreen extends Screen {
 
     private void bar(Canvas c, float x, float y, float w, float h, float frac, boolean diamond) {
         frac = Math.max(0, Math.min(1, frac));
-        RectF r = new RectF(x, y, x + w, y + h);
-        c.drawRect(r, lcd.stroke);
+        c.drawRect(x, y, x + w, y + h, lcd.stroke);
         float fx = x + 2 + (w - 4) * frac;
         if (diamond) {
-            Path p = new Path();
+            Path p = path;
+            p.reset();
             float cy = y + h / 2f, s = h * 0.75f;
             p.moveTo(fx, cy - s);
             p.lineTo(fx + s, cy);
@@ -154,9 +167,8 @@ public class NowPlayingScreen extends Screen {
             p.lineTo(fx - s, cy);
             p.close();
             c.drawRect(x + 2, y + 2, fx, y + h - 2, lcd.dither);
-            Paint bgp = new Paint();
-            bgp.setColor(lcd.bg);
-            c.drawPath(p, bgp);
+            bgPaint.setColor(lcd.bg);
+            c.drawPath(p, bgPaint);
             c.drawPath(p, lcd.stroke);
         } else {
             c.drawRect(x + 2, y + 2, fx, y + h - 2, lcd.dither);
@@ -165,7 +177,8 @@ public class NowPlayingScreen extends Screen {
     }
 
     private void speaker(Canvas c, float x, float cy, boolean loud) {
-        Path p = new Path();
+        Path p = path;
+        p.reset();
         p.moveTo(x, cy - 3);
         p.lineTo(x + 4, cy - 3);
         p.lineTo(x + 9, cy - 8);
@@ -198,12 +211,11 @@ public class NowPlayingScreen extends Screen {
             Paint p = lcd.stroke;
             c.drawLine(x, 8, x + 14, 20, p);
             c.drawLine(x, 20, x + 14, 8, p);
-            Path a = new Path();
+            Path a = path;
+            a.reset();
             a.moveTo(x + 14, 4); a.lineTo(x + 20, 8); a.lineTo(x + 14, 12); a.close();
-            Path b = new Path();
-            b.moveTo(x + 14, 16); b.lineTo(x + 20, 20); b.lineTo(x + 14, 24); b.close();
+            a.moveTo(x + 14, 16); a.lineTo(x + 20, 20); a.lineTo(x + 14, 24); a.close();
             c.drawPath(a, lcd.ink);
-            c.drawPath(b, lcd.ink);
         }
     }
 

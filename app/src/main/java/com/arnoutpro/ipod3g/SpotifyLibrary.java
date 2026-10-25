@@ -92,8 +92,8 @@ public final class SpotifyLibrary {
     private final Handler main = new Handler(Looper.getMainLooper());
     private final Runnable onChange;
     private Snapshot now = new Snapshot(new ArrayList<>());
-    private boolean loading;
-    private long loadedAt;
+    private volatile boolean loading;
+    private volatile long loadedAt;
 
     // What Spotify sent, kept to save and to rebuild the snapshot from.
     private List<Song> likedRaw = new ArrayList<>();
@@ -104,7 +104,16 @@ public final class SpotifyLibrary {
         this.spotify = spotify;
         this.file = new File(dir, FILE);
         this.onChange = onChange;
-        load();
+        // Reading a few thousand songs takes a moment: do it off the main thread, on the same
+        // thread as refreshes, so a refresh always comes after it.
+        if (file.exists()) {
+            loading = true;
+            spotify.callLong(this::load, (snap, err) -> {
+                loading = false;
+                if (snap != null && now.liked.isEmpty()) now = snap;
+                onChange.run();
+            });
+        }
     }
 
     public Snapshot get() { return now; }
@@ -292,31 +301,39 @@ public final class SpotifyLibrary {
         }
     }
 
-    private void load() {
-        if (!file.exists()) return;
+    /** Reads the saved library; background thread. */
+    private Snapshot load() {
         try (InputStream in = new FileInputStream(file)) {
             byte[] b = new byte[(int) file.length()];
             int n = 0;
             for (int r; n < b.length && (r = in.read(b, n, b.length - n)) > 0; ) n += r;
             JSONObject o = new JSONObject(new String(b, 0, n, StandardCharsets.UTF_8));
-            likedRaw = songs(o.getJSONArray("liked"));
+            List<Song> liked = songs(o.getJSONArray("liked"));
+            List<Album> saved = new ArrayList<>();
             JSONArray albums = o.getJSONArray("albums");
             for (int i = 0; i < albums.length(); i++) {
                 JSONObject a = albums.getJSONObject(i);
                 Album album = new Album(a.getString("uri"), a.getString("name"), a.getString("artist"));
                 album.saved = true;
                 album.songs.addAll(songs(a.getJSONArray("songs")));
-                savedRaw.add(album);
+                saved.add(album);
             }
-            JSONArray followed = o.getJSONArray("followed");
-            for (int i = 0; i < followed.length(); i++) {
-                followedRaw.put(followed.getJSONArray(i).getString(0), followed.getJSONArray(i).optString(1, null));
+            Map<String, String> followed = new LinkedHashMap<>();
+            JSONArray f = o.getJSONArray("followed");
+            for (int i = 0; i < f.length(); i++) {
+                followed.put(f.getJSONArray(i).getString(0), f.getJSONArray(i).optString(1, null));
             }
-            now = build(likedRaw, savedRaw, followedRaw);
+            synchronized (this) {
+                likedRaw = liked;
+                savedRaw = saved;
+                followedRaw = followed;
+            }
             loadedAt = o.optLong("at");
+            return build(liked, saved, followed);
         } catch (IOException | JSONException e) {
             //noinspection ResultOfMethodCallIgnored
             file.delete();
+            return null;
         }
     }
 

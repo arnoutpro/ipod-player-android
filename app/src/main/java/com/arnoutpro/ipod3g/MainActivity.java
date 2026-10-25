@@ -217,6 +217,22 @@ public class MainActivity extends Activity implements PlayerService.Listener {
         super.onDestroy();
     }
 
+    /** While music plays on a speaker, the volume buttons set that speaker's volume. */
+    @Override
+    public boolean onKeyDown(int keyCode, android.view.KeyEvent event) {
+        int d = keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP ? 1
+                : keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN ? -1 : 0;
+        Playback pb = playback();
+        if (d != 0 && pb != null && pb.speaker() != null) {
+            view.wake();
+            if (lcd.top() instanceof NowPlayingScreen) ((NowPlayingScreen) lcd.top()).volumeKey(d);
+            else NowPlayingScreen.speakerVolume(pb, d);
+            redraw();
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
     @Override
     @SuppressWarnings("deprecation")
     public void onBackPressed() {

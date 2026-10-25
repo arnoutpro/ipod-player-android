@@ -137,7 +137,8 @@ public class ListScreen extends Screen {
                 c.drawText(v, end - text.measureText(v), Lcd.baseline(text, y, Lcd.ROW_H), text);
             }
             if (it.arrow) {
-                Path p = new Path();
+                Path p = arrow;
+                p.reset();
                 float ax = right - 16, ay = y + Lcd.ROW_H / 2f;
                 p.moveTo(ax, ay - 7);
                 p.lineTo(ax + 8, ay);
@@ -170,6 +171,7 @@ public class ListScreen extends Screen {
     }
 
     private final Paint bgPaint = new Paint();
+    private final Path arrow = new Path();
 
     private Paint bgPaint() {
         bgPaint.setColor(lcd.bg);

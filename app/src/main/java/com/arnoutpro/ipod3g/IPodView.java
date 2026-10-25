@@ -47,7 +47,10 @@ public class IPodView extends View implements SensorEventListener {
     private final RectF body = new RectF(), bezel = new RectF();
     private final float[] btnX = new float[4];
     private float btnY, btnR, wheelX, wheelY, wheelR, centerR, bw;
-    private Shader bodyShader, wheelShader, centerShader, btnShader, glassShader, glossShader;
+    private Shader bodyShader, wheelShader, centerShader, btnShader, glassShader, glossShader, lcdShadow;
+    // Reused while drawing, so a frame creates no garbage.
+    private final RectF rim = new RectF();
+    private final Path glyphPath = new Path();
     // Holes in the acrylic top layer that the buttons and the wheel sit sunk in.
     private final Shader[] btnWall = new Shader[4], btnEdge = new Shader[4];
     private Shader wheelWall, wheelEdge, centerWall, centerEdge;
@@ -152,6 +155,8 @@ public class IPodView extends View implements SensorEventListener {
                 f.centerTop, f.centerBottom, Shader.TileMode.CLAMP);
         btnShader = new LinearGradient(0, btnY - btnR, 0, btnY + btnR,
                 f.btnTop, f.btnBottom, Shader.TileMode.CLAMP);
+        lcdShadow = new LinearGradient(0, lcdRect.top, 0, lcdRect.top + bw * 0.03f,
+                0x50000000, 0x00000000, Shader.TileMode.CLAMP);
         buildHoles();
     }
 
@@ -233,15 +238,32 @@ public class IPodView extends View implements SensorEventListener {
 
     // ---- tilt ------------------------------------------------------------------------------
 
+    private boolean tiltWanted, tiltOn;
+
+    /** The app is visible: follow the tilt, as long as the backlight is on. */
     public void startTilt() {
-        SensorManager sm = (SensorManager) getContext().getSystemService(Context.SENSOR_SERVICE);
-        Sensor g = sm.getDefaultSensor(Sensor.TYPE_GRAVITY);
-        if (g == null) g = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        if (g != null) sm.registerListener(this, g, SensorManager.SENSOR_DELAY_UI);
+        tiltWanted = true;
+        updateTilt();
     }
 
     public void stopTilt() {
-        ((SensorManager) getContext().getSystemService(Context.SENSOR_SERVICE)).unregisterListener(this);
+        tiltWanted = false;
+        updateTilt();
+    }
+
+    /** Listens to the gravity sensor only while it shows: visible and lit (saves battery). */
+    private void updateTilt() {
+        boolean want = tiltWanted && lit;
+        if (want == tiltOn) return;
+        tiltOn = want;
+        SensorManager sm = (SensorManager) getContext().getSystemService(Context.SENSOR_SERVICE);
+        if (!want) {
+            sm.unregisterListener(this);
+            return;
+        }
+        Sensor g = sm.getDefaultSensor(Sensor.TYPE_GRAVITY);
+        if (g == null) g = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        if (g != null) sm.registerListener(this, g, SensorManager.SENSOR_DELAY_UI);
     }
 
     @Override
@@ -301,7 +323,7 @@ public class IPodView extends View implements SensorEventListener {
 
     private void drawScreen(Canvas c, long now) {
         float r = bw * 0.024f;
-        RectF rim = new RectF(bezel);
+        rim.set(bezel);
         rim.inset(-bw * 0.008f, -bw * 0.008f);
         paint.setColor(finish.bezelRim);
         c.drawRoundRect(rim, r * 1.3f, r * 1.3f, paint);
@@ -311,8 +333,7 @@ public class IPodView extends View implements SensorEventListener {
         c.drawBitmap(lcd.bitmap, null, lcdRect, lcdPaint);
 
         // Inner shadow along the top of the LCD, then the glass reflection.
-        shade(new LinearGradient(0, lcdRect.top, 0, lcdRect.top + bw * 0.03f,
-                0x50000000, 0x00000000, Shader.TileMode.CLAMP));
+        shade(lcdShadow);
         c.drawRect(lcdRect, paint);
         shade(glassShader);
         c.drawRoundRect(bezel, r, r, paint);
@@ -337,7 +358,8 @@ public class IPodView extends View implements SensorEventListener {
         if (lit) glyph.setShadowLayer(btnR * 0.28f, 0, 0, 0xFFFF3A10);
         else glyph.clearShadowLayer();
         float s = btnR * 0.26f;
-        Path p = new Path();
+        Path p = glyphPath;
+        p.reset();
         switch (i) {
             case B_PREV:
                 c.drawRect(x - s * 1.6f, btnY - s, x - s * 1.2f, btnY + s, glyph);
@@ -557,6 +579,7 @@ public class IPodView extends View implements SensorEventListener {
                 feedback(HapticFeedbackConstants.LONG_PRESS);
                 if (ps != null && ps.isPlayingOrLoading()) ps.toggle();
                 lit = false;
+                updateTilt();
                 break;
             case B_PREV:
             case B_NEXT:
@@ -588,7 +611,10 @@ public class IPodView extends View implements SensorEventListener {
         int s = host.backlightSeconds();
         boolean was = lit;
         lit = s != 0;
-        if (was != lit) invalidate();
+        if (was != lit) {
+            invalidate();
+            updateTilt();
+        }
         handler.removeCallbacks(backlightCheck);
         if (s > 0) handler.postDelayed(backlightCheck, s * 1000L + 50);
     }
@@ -598,6 +624,7 @@ public class IPodView extends View implements SensorEventListener {
         lit = !litAtDown;
         litAtDown = lit;
         forcedOff = !lit;
+        updateTilt();
         handler.removeCallbacks(backlightCheck);
         lastActivity = System.currentTimeMillis();
         int s = host.backlightSeconds();
@@ -610,6 +637,7 @@ public class IPodView extends View implements SensorEventListener {
         if (s > 0 && System.currentTimeMillis() - lastActivity >= s * 1000L) {
             lit = false;
             invalidate();
+            updateTilt();
         }
     }
 

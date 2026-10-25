@@ -369,6 +369,7 @@ public class PlayerService extends Service implements Playback {
     }
 
     private void resumeHere(int at) {
+        server.stop(); // no speaker needs it now; publish() starts it again
         if (hasTrack()) {
             startTrack(false);
             pendingSeek = at;
