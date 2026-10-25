@@ -569,7 +569,16 @@ public final class Menus {
         items.add(item("Songs").value(() -> songs));
         items.add(item("Artists").value(() -> artists));
         items.add(item("Albums").value(() -> albums));
-        items.add(item("Version").value(() -> "1.0"));
+        // The real version, e.g. 1.0.23: the last number is the GitHub build it came from.
+        String version;
+        try {
+            version = host.getPackageManager().getPackageInfo(host.getPackageName(), 0).versionName;
+        } catch (android.content.pm.PackageManager.NameNotFoundException e) {
+            version = "?";
+        }
+        String v = version;
+        items.add(item("Version").value(() -> v));
+        items.add(item("Made by").value(() -> "Arnout van der Elst"));
         return new ListScreen(lcd, "About", items);
     }
 }
