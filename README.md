@@ -2,10 +2,10 @@
 
 *Serene listening, the way it used to feel.*
 
-A music player for Android that looks and works like the **3rd generation iPod** from 2003.
-It has the grey-blue LCD with its pixel font, the four red-lit touch buttons and the touch wheel,
-under a clear acrylic layer. It plays the music on your phone and, if you like, your Spotify
-library, on the phone or on your Sonos speakers, Chromecasts and Spotify Connect devices.
+An Android music player that looks and works like the 3rd generation iPod from 2003: the grey-blue
+LCD with its pixel font, the four red-lit buttons and the touch wheel, all under a clear acrylic
+layer. It plays the music on your phone, and your Spotify library if you connect it. You can send
+it to Sonos speakers, a Chromecast or a Spotify Connect device.
 
 <p align="center">
   <img src="docs/screenshots/main-menu.png" width="220" alt="Main menu, white">
@@ -22,32 +22,20 @@ on the Play Store.
 
 ## Why
 
-Modern music apps want your attention. They show feeds, suggestions, notifications, videos and
-banners, and put a new screen in front of you every time you go looking for a song. Somewhere
-along the way, listening to music became one more thing to scroll through.
+Most music apps are busy. Open one to play an album and you get a feed, a row of suggestions, a
+podcast you didn't ask for and a banner for something else. Playing music has turned into one more
+screen to scroll through.
 
-The iPod got this right. It did one thing: you picked an album, turned the wheel, pressed play,
-and that was it. There was nothing else on the screen to pull you away.
+The iPod didn't do any of that. You picked an album, pressed play and put it down.
 
-This app brings that back. It's made for **serene listening sessions with no distractions from
-the app**: no feed, no recommendations, no ads, nothing competing for your attention. What you
-get is the **look and feel of the 3rd generation iPod**, down to the click of the wheel and the
-glow of the buttons, for that vintage experience.
+That's what this app is for: listening sessions where the app stays out of the way. There's no
+feed, no recommendations and no ads, just the menus of a 3rd generation iPod, the click of its
+wheel and the red glow of its buttons. If you miss how that felt, or never had one and like old
+hardware, this is a 2003 iPod on the phone you already carry.
 
-It isn't a museum piece, though. Under the old face it has the things you'd miss today: your
-**Spotify** library browsed like an iPod, music sent to your **Sonos** speakers or a **Chromecast**,
-Spotify Connect, a 7-band equalizer, and a dark finish for the evening.
-
-### Who it's for
-
-- **Anyone who wants to just listen:** put on an album and let it play, without the app asking
-  for anything.
-- **iPod nostalgics:** people who remember the wheel, the pixel font and the satisfying click,
-  and miss how simple it felt.
-- **Vintage tech lovers:** if you like the feel of old hardware, this is a 2003 iPod you carry on
-  today's phone.
-- **Spotify and Sonos households:** keep your streaming library and your speakers, but control
-  them from something calmer than the usual apps.
+It does keep a few things you'd hate to give up. Your Spotify library shows up in the iPod's menus,
+sorted by artist and album. The music can go to your Sonos speakers, a Chromecast or a Spotify
+Connect speaker. There's a 7-band equalizer, and a black finish for the evening.
 
 ---
 
@@ -94,23 +82,23 @@ The APK is about 4 MB, mostly Google's Cast libraries.
 
 ## The face
 
-The whole screen is the front of the iPod, drawn in code and scaled to fit any phone.
+The whole screen is the front of the iPod. It's drawn in code, so it scales to any phone.
 
-- **The LCD:** 320 × 292 pixels with a title bar and seven menu rows, a crisp pixel font and the
-  original grey-blue backlight. The backlight goes darker greenish-grey when it turns off.
-- **Acrylic top layer:** like the real thing, the face sits under a clear layer. The buttons, the
-  wheel and the centre button are sunk into holes in it. Each hole's wall casts a soft shadow, and
-  its polished edge catches the light. A faint gloss runs across the face.
-- **Light that follows the phone:** the light comes from the ceiling of the room, read from the
-  gravity sensor. Everything lit is brightest on the side facing it: the shadows and edge
-  highlights in the holes, the shading of the body, the gloss on the acrylic and the reflection on
-  the screen glass. Tilt the phone and they all swing round, with the gloss sliding the other way
-  like a reflection. Lay it flat and the light comes from straight above, so the face looks almost
-  even.
-- **Red-lit buttons:** the four touch buttons glow red while the backlight is on and turn grey
-  when it's off.
-- **Two finishes:** the original white, or a black version that never existed. See
-  [Color](#settings).
+The LCD is 320 × 292 pixels: a title bar and seven menu rows in a crisp pixel font, lit grey-blue.
+When the backlight goes off it turns a darker greenish grey, and the red glow on the four buttons
+goes grey with it.
+
+Like the real thing, the face sits under a clear acrylic layer. The buttons and the wheel are sunk
+into holes in it. Each hole casts a soft shadow on one side and catches the light on its polished
+edge, and a faint gloss runs across the face.
+
+The light comes from the ceiling of your room. The app reads the phone's gravity sensor, so the
+side facing up is the bright side: the shadows in the holes, the shading of the body, the gloss and
+the reflection on the screen glass all turn as you tilt the phone. Lay it flat on a table and the
+light comes from straight above, which makes the face look almost even.
+
+There are two finishes: the original white, and a black one that Apple never made. See
+[Color](#settings).
 
 ---
 
@@ -133,7 +121,7 @@ has one. The click can be turned off under Settings › Clicker.
 
 ## Menus
 
-The menus follow the original iPod, plus a Spotify menu.
+The menus are the original iPod's, with a Spotify menu added.
 
 | Menu | What's in it |
 | --- | --- |
@@ -146,12 +134,12 @@ The menus follow the original iPod, plus a Spotify menu.
 | **Backlight** | Turns the backlight on or off |
 | **Now Playing** | Appears once something is playing |
 
-Lists are sorted like an iPod: case-insensitive, and ignoring a leading "The". Long names scroll
-sideways when highlighted. Your music is read from the phone's media library, so the songs in
-`Music/` and other music folders show up. After adding songs, use Settings › Rescan Music.
+Lists are sorted the way the iPod sorted them: ignoring capitals and a leading "The". A long name
+scrolls sideways when you highlight it. The app reads your music from the phone's media library, so
+anything in `Music/` or another music folder shows up. Added some songs? Settings › Rescan Music.
 
-**On-The-Go:** hold the centre button on any song to add it. The playlist is saved, and has a
-"Clear Playlist" item at the bottom.
+On-The-Go is your own quick playlist. Hold the centre button on any song to add it; the list is
+saved, and "Clear Playlist" at the bottom empties it.
 
 ---
 
@@ -196,8 +184,8 @@ applies to the phone's own music; Spotify's sound comes from the Spotify app and
 
 ## Spotify
 
-The **Spotify** menu lets you browse your Spotify library in iPod menus and play it through the
-Spotify app on the same phone. The iPod's Now Playing and buttons control it.
+The Spotify menu shows your Spotify library as iPod menus and plays it through the Spotify app on
+the same phone. Now Playing and the buttons control it the same way as your own music.
 
 **Connecting**
 
@@ -208,48 +196,51 @@ Spotify app on the same phone. The iPod's Now Playing and buttons control it.
 
 **Browsing**
 
-Your Liked Songs, saved albums and followed artists are browsed like the iPod's own music:
+Your Liked Songs, saved albums and followed artists are grouped like the iPod's own music:
 
 - **Playlists:** your own and the ones you follow.
-- **Artists:** everyone in your Liked Songs and saved albums, plus the artists you follow, A–Z.
-  Each has **All Songs**, their albums in your library, and **More on Spotify** with all their
+- **Artists:** everyone in your Liked Songs and saved albums, plus the artists you follow. Each
+  one has All Songs, their albums in your library, and More on Spotify for the rest of their
   albums and singles.
-- **Albums:** the albums of your liked songs plus your saved albums, A–Z. A saved album shows the
-  whole album; any other shows the songs you liked from it.
+- **Albums:** your saved albums, plus the albums your liked songs come from. A saved album shows
+  every song; any other album shows just the ones you liked.
 - **Songs:** all your liked songs, A–Z.
-- **Recently Liked:** your liked songs in Spotify's order, newest first.
+- **Recently Liked:** the same songs in Spotify's order, newest first.
 
-The library is loaded once in the background, about 20 songs per request, and kept on the phone,
-so browsing is instant. It's refreshed when you open the Spotify menu, at most every 10 minutes.
-The first load shows songs as they come in.
+The app loads your library once in the background and keeps it on the phone, so browsing is
+instant. It checks for changes when you open the Spotify menu, at most every 10 minutes. The very
+first load takes a while for a big library, but songs appear as they come in.
 
 **Playing**
 
-- Picking a song in a playlist or album plays it there, so the following songs play after it.
-  In All Songs and Songs, the next 30 songs from the list are queued after it.
-- The music comes out of **this phone**, never a computer or speaker that happens to be active on
-  your account, unless you pick one under [Speakers](#speakers).
-- If the Spotify app is asleep, the iPod wakes it in the background with Spotify's App Remote SDK,
-  without showing it. Only if that fails does it open Spotify for a second and come back by itself.
-- Now Playing shows "Spotify" in the corner ("Spotify on *speaker*" when it plays elsewhere), plus
-  the song, progress, shuffle and repeat. Play/pause, previous, next, volume and scrubbing all work.
-- Playing your own music again switches back automatically; Spotify pauses when it loses the audio.
-- When you open the iPod while Spotify has a song playing or paused, here or on a speaker, Now
-  Playing picks it up.
+Pick a song in a playlist or album and it plays from there, with the rest of the list after it. In
+All Songs and Songs, the next 30 songs are queued.
+
+The music comes out of this phone unless you choose a speaker under [Speakers](#speakers). That's
+on purpose: Spotify likes to play on whatever device was active last, and during testing that
+sent a song to a laptop's web player instead of the phone.
+
+If the Spotify app is asleep, the iPod wakes it in the background with Spotify's App Remote SDK.
+You won't see Spotify open. Only if that fails does it flash Spotify on screen for a second and
+switch back.
+
+Now Playing says "Spotify" in the corner, or "Spotify on *speaker*" when the music plays
+somewhere else. Play/pause, previous, next, volume and scrubbing all work. Start one of your own
+songs and the iPod switches back; Spotify pauses itself. And if Spotify already has a song going
+when you open the iPod, Now Playing picks it up.
 
 **Limits from Spotify's rules (2026)**
 
-The app runs in Spotify's *development mode*, which comes with rules this app can't change:
+The app runs in Spotify's *development mode*. That comes with rules the app can't change:
 
-- **Spotify Premium** is required, both for the app's owner and for playing songs.
-- **At most 5 Spotify accounts** can use one registered app, and each has to be added by hand in
-  the Spotify developer dashboard.
-- **Playlists you follow but don't own:** Spotify hides their songs from apps like this one. They
-  show **Play Playlist**, which plays the whole playlist, and "Songs hidden by Spotify".
-- **Local files** in your Spotify playlists can't be streamed. A playlist with only local files says
+- You need **Spotify Premium**, both as the owner of the app registration and to play songs.
+- **At most 5 Spotify accounts** can use one app registration, and each one has to be added by
+  hand in the Spotify developer dashboard.
+- Spotify hides the songs of **playlists you follow but don't own**. Those show Play Playlist,
+  which plays the whole thing, and a note saying the songs are hidden.
+- **Local files** in your Spotify playlists can't be streamed. A playlist with nothing else says
   "Only local files".
-- Spotify's logos aren't drawn on the pixel LCD. The word "Spotify" on Now Playing serves as the
-  credit.
+- Spotify's logo isn't drawn on the pixel LCD. The word "Spotify" on Now Playing is the credit.
 
 **Using your own Spotify app registration**
 
@@ -266,36 +257,41 @@ Sign-in uses the authorization code flow with PKCE, so the app never needs the c
 
 ## Speakers
 
-**Settings › Speakers** picks where the music plays. On Now Playing, hold the centre button to get
-there straight away.
+Settings › Speakers decides where the music plays. On Now Playing you can get there faster by
+holding the centre button.
 
-- **This Phone:** the default. Picking it while casting brings the music back to the phone, paused
-  where the speaker left off.
-- **Sonos and Cast devices:** Sonos speakers (marked "Sonos", listed per group by room name, e.g.
-  "Kitchen +1") and Chromecasts, Google TVs and Nest speakers (marked "Cast") on your Wi-Fi. Pick
-  one and the phone's own music plays there, from the same spot, playing or paused as it was. The
-  rest of the queue follows, with shuffle, repeat, Next, Previous and scrubbing. Now Playing reads
-  "3 of 12 on *speaker*" and the wheel sets its volume (for a Sonos group, the whole group's, in
-  proportion). The speaker fetches each song from a small server in the app over your Wi-Fi; every
-  song gets a random secret address, so nothing else on the network can browse your music. The
-  equalizer doesn't apply while playing on a speaker. These speakers don't take Spotify: while
-  Spotify is playing they show "No Spotify", and picking one says so instead of casting.
-- **Spotify Connect devices:** every speaker, TV, computer or web player on your Spotify account
-  shows up by name. Pick one and Spotify's music moves there straight away, playing or paused as it
-  was, and new Spotify songs keep playing there. Now Playing then reads "Spotify on *speaker*", and
-  the wheel sets that speaker's own volume in steps of 5%. If the speaker is switched off, songs
-  play on the phone. This is for Spotify only.
-- **Other Outputs:** opens Android's own output switcher for Bluetooth speakers and headphones and
-  other outputs your phone supports. This works for everything, including the phone's own music.
+**This Phone** is the default. Pick it while music plays elsewhere and the song comes back to the
+phone, paused where the speaker stopped.
 
-**Volume:** while the music plays on a Sonos, Cast or Spotify Connect speaker, both the wheel on Now
-Playing and the phone's volume buttons set that speaker's volume, in steps of 5%. The volume buttons
-do this while the iPod is on screen; with the app in the background they control the phone as usual.
+**Sonos speakers** (marked "Sonos") and **Chromecasts, Google TVs and Nest speakers** (marked
+"Cast") play the music on your phone. They're listed by room or device name; a Sonos group shows
+up once, as "Kitchen +1" for example. Pick one and the song carries on there from the same spot,
+playing or paused. The rest of the queue follows, and Next, Previous, shuffle, repeat and scrubbing
+all work. Now Playing reads "3 of 12 on Kitchen".
 
-The phone and the speaker need to be on the same Wi-Fi. Sonos speakers are found and controlled
-directly with Sonos's own network protocol, so nothing needs installing or linking. Cast devices
-use Google's Default Media Receiver, which needs Google Play services on the phone. Spotify can't
-send music to Sonos speakers from here: Spotify doesn't list them to other apps.
+How does a Sonos get a song off your phone? The app runs a small web server, and the speaker
+fetches each song from it over Wi-Fi. Every song gets a random address, so nothing else on the
+network can browse your music. The server stops when the music comes back to the phone. Two
+limits: the equalizer doesn't apply on a speaker, and these speakers can't play Spotify. While
+Spotify is playing they say "No Spotify", and picking one tells you so instead of starting an empty
+cast.
+
+**Spotify Connect devices** are for Spotify. Every speaker, TV, computer or web player that
+Spotify lists for your account shows up by name. Pick one and the Spotify song moves there,
+playing or paused, and new songs keep going there until you pick another. If that speaker is
+switched off, songs play on the phone instead.
+
+**Other Outputs** opens Android's own switcher for Bluetooth speakers, headphones and whatever else
+your phone supports. That works for everything.
+
+While music plays on a speaker, the wheel on Now Playing sets that speaker's volume in steps of 5%.
+So do the phone's volume buttons, as long as the iPod is on screen; in the background they go back
+to controlling the phone. For a Sonos group, the whole group changes together.
+
+A few practical notes. The phone and the speaker have to be on the same Wi-Fi. Sonos needs nothing
+installed or linked: the app talks to the speakers directly, the way the Sonos app does. Chromecast
+uses Google's Default Media Receiver, which needs Google Play services on the phone. And Spotify
+won't send music to a Sonos from here, because Spotify doesn't list Sonos speakers to other apps.
 
 ---
 
@@ -315,13 +311,13 @@ send music to Sonos speakers from here: Spotify doesn't list them to other apps.
 | **Color** | White, Black or Auto (follows the phone's dark mode) |
 | **Rescan Music** | Reads the phone's music library again |
 
-**Backlight:** with a timer set, any touch lights the screen and buttons, and they go dark after
-the chosen time. Main menu › Backlight turns it off by hand. It then stays off until you turn it on
-there again.
+With a backlight timer set, any touch lights the screen and buttons, and they go dark again after
+the chosen time. Main menu › Backlight switches the light off by hand, and then it stays off until
+you switch it back on there.
 
-**Color:** the black finish is an interpretation of a black 3rd generation iPod, which Apple never
-made. It's gloss black plastic under the acrylic, with a graphite wheel and buttons and the same red
-glow. Auto switches the moment the phone's dark mode changes, without losing your place in the menus.
+The black finish is a guess at what a black 3rd generation iPod would have looked like: gloss black
+plastic under the acrylic, a graphite wheel and buttons, the same red glow. Auto follows the phone's
+dark mode and switches the moment it changes, without losing your place in the menus.
 
 <br clear="right">
 
@@ -335,21 +331,20 @@ glow. Auto switches the moment the phone's dark mode changes, without losing you
   <img src="docs/screenshots/brick.png" width="220" alt="Brick">
 </p>
 
-- **Clock:** the time and date in the big LCD font, in the 12- or 24-hour format of your phone.
-- **Games › Brick:** the iPod's Breakout. Turn the wheel to move the paddle and press the centre
-  button to serve. Score points for every brick, with 3 lives and new levels when the wall is
-  cleared.
+The clock shows the time and date in the big LCD font, in your phone's 12- or 24-hour format.
+
+Brick is the iPod's Breakout. Turn the wheel to move the paddle and press the centre button to
+serve. You get 3 lives, points for every brick, and a new level when the wall is gone.
 
 ---
 
 ## Background playback
 
-- Music keeps playing when you leave the app. A media notification and the lock screen show the
-  song, with play/pause, previous and next.
-- Headset buttons and Bluetooth controls work.
-- Unplugging headphones pauses the music.
-- Phone calls and other apps pause it and resume it, through Android's audio focus.
-- The battery icon in the title bar shows the phone's real battery level.
+Music keeps playing when you leave the app. The notification and the lock screen show the song with
+play/pause, previous and next, and headset and Bluetooth buttons work too. Pull out your headphones
+and the music pauses. A phone call pauses it and it picks up again afterwards.
+
+The battery icon in the title bar is the phone's real battery level.
 
 ---
 
