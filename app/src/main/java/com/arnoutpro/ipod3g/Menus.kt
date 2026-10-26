@@ -115,7 +115,7 @@ class Menus(private val lcd: Lcd) {
     private fun casting() = host.service()?.speaker() != null
 
     private fun noSpotifyHere() {
-        lcd.push(MessageScreen(lcd, "Speakers", "Spotify plays only on Spotify Connect speakers. This one plays your own music."))
+        lcd.push(MessageScreen(lcd, "Speakers", "Spotify doesn't play on Cast speakers. This one plays your own music."))
     }
 
     private fun speakerItems(spotify: List<SpotifyPlayer.Speaker>): List<ListScreen.Item> {
@@ -123,31 +123,30 @@ class Menus(private val lcd: Lcd) {
         val items = ArrayList<ListScreen.Item>()
         items.add(
             item("This Phone")
-                .value { if (player.target() == null && !casting()) "✓" else "" }
+                .value { if (player.target() == null && player.sonosTarget() == null && !casting()) "✓" else "" }
                 .onSelect {
                     player.useSpeaker(null)
                     if (casting()) host.service()?.stopCasting()
                     host.redraw()
                 }
         )
-        // Sonos groups and Cast devices play the phone's own music only: Spotify streams into the
-        // Spotify app, so there is nothing to send them.
+        // A Sonos group plays the phone's own music from the iPod's server, and Spotify through
+        // the speakers' own Spotify account: picked while Spotify plays, it's Spotify's speaker.
         for (g in host.sonosSpeakers()) {
             items.add(
                 item(g.name)
                     .value {
-                        when {
-                            host.service()?.castingTo(g) == true -> "✓"
-                            host.spotifyPlaying() -> "No Spotify"
-                            else -> "Sonos"
-                        }
+                        val on = if (host.spotifyPlaying()) player.sonosTarget() == g else host.service()?.castingTo(g) == true
+                        if (on) "✓" else "Sonos"
                     }
                     .onSelect {
-                        if (host.spotifyPlaying()) noSpotifyHere() else host.service()?.castToSonos(g)
+                        if (host.spotifyPlaying()) player.useSonos(g) else host.service()?.castToSonos(g)
                         host.redraw()
                     }
             )
         }
+        // Cast devices play the phone's own music only: Spotify streams into the Spotify app, so
+        // there is nothing to send them.
         for (r: MediaRouter.RouteInfo in host.castSpeakers()) {
             items.add(
                 item(r.name)

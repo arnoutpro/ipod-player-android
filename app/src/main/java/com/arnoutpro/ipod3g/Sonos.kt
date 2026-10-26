@@ -139,18 +139,27 @@ object Sonos {
             "<u:$action xmlns:u=\"urn:schemas-upnp-org:service:$service:1\">$args" +
             "</u:$action></s:Body></s:Envelope>"
         val b = body.toByteArray(Charsets.UTF_8)
+        val head = "POST $path HTTP/1.1\r\n" +
+            "Host: $host\r\n" +
+            "Content-Type: text/xml; charset=\"utf-8\"\r\n" +
+            "SOAPACTION: \"urn:schemas-upnp-org:service:$service:1#$action\"\r\n" +
+            "Content-Length: ${b.size}\r\n" +
+            "Connection: close\r\n\r\n"
+        return request(host, head, b)
+    }
+
+    /** A plain GET, e.g. for the speaker's status pages. */
+    @Throws(IOException::class)
+    fun get(host: String, path: String): String =
+        request(host, "GET $path HTTP/1.1\r\nHost: $host\r\nConnection: close\r\n\r\n", ByteArray(0))
+
+    private fun request(host: String, head: String, b: ByteArray): String {
         // A plain socket, not HttpURLConnection: Android blocks unencrypted HTTP for the app, and
         // Sonos only speaks plain HTTP. This keeps that block for everything else.
         val colon = host.lastIndexOf(':')
         Socket().use { socket ->
             socket.connect(InetSocketAddress(host.substring(0, colon), host.substring(colon + 1).toInt()), 3000)
             socket.soTimeout = 5000
-            val head = "POST $path HTTP/1.1\r\n" +
-                "Host: $host\r\n" +
-                "Content-Type: text/xml; charset=\"utf-8\"\r\n" +
-                "SOAPACTION: \"urn:schemas-upnp-org:service:$service:1#$action\"\r\n" +
-                "Content-Length: ${b.size}\r\n" +
-                "Connection: close\r\n\r\n"
             val out = socket.getOutputStream()
             out.write(head.toByteArray(Charsets.US_ASCII))
             out.write(b)
@@ -196,6 +205,24 @@ object Sonos {
         } catch (ignored: IOException) {
         }
         return null
+    }
+
+    /** Milliseconds as Sonos writes times: "0:03:12". */
+    @JvmStatic
+    fun time(ms: Int): String {
+        val s = maxOf(0, ms / 1000)
+        return String.format(Locale.ROOT, "%d:%02d:%02d", s / 3600, s / 60 % 60, s % 60)
+    }
+
+    /** "0:03:12" to milliseconds, or -1. */
+    @JvmStatic
+    fun parseTime(t: String?): Int {
+        val p = t?.split(":") ?: return -1
+        if (p.size != 3) return -1
+        val h = p[0].toIntOrNull() ?: return -1
+        val m = p[1].toIntOrNull() ?: return -1
+        val s = p[2].toDoubleOrNull() ?: return -1
+        return (h * 3600 + m * 60 + s.toInt()) * 1000
     }
 
     @JvmStatic

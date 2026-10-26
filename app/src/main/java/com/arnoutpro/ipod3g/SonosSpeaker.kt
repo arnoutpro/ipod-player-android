@@ -12,7 +12,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
-import java.util.Locale
 
 /**
  * A Sonos group playing the phone's own music. Commands go to the group's coordinator; its state
@@ -75,7 +74,7 @@ class SonosSpeaker(
             "<dc:creator>${Sonos.escape(t.artist)}</dc:creator>" +
             "<upnp:album>${Sonos.escape(t.album)}</upnp:album>" +
             "<upnp:class>object.item.audioItem.musicTrack</upnp:class>" +
-            "<res protocolInfo=\"http-get:*:$type:*\" duration=\"${time(t.durationMs.toInt())}\">" +
+            "<res protocolInfo=\"http-get:*:$type:*\" duration=\"${Sonos.time(t.durationMs.toInt())}\">" +
             "${Sonos.escape(url)}</res></item></DIDL-Lite>"
         scope.launch {
             send {
@@ -173,8 +172,8 @@ class SonosSpeaker(
         val info = av("GetTransportInfo", ID)
         val state = Sonos.value(info, "CurrentTransportState")
         val p = av("GetPositionInfo", ID)
-        val rel = parse(Sonos.value(p, "RelTime"))
-        val d = parse(Sonos.value(p, "TrackDuration"))
+        val rel = Sonos.parseTime(Sonos.value(p, "RelTime"))
+        val d = Sonos.parseTime(Sonos.value(p, "TrackDuration"))
         if (g != generation) return // a new song was loaded meanwhile
         if (rel >= 0) {
             pos = rel
@@ -207,7 +206,7 @@ class SonosSpeaker(
     }
 
     private fun seekNow(ms: Int) {
-        av("Seek", "$ID<Unit>REL_TIME</Unit><Target>${time(ms)}</Target>")
+        av("Seek", "$ID<Unit>REL_TIME</Unit><Target>${Sonos.time(ms)}</Target>")
     }
 
     private fun av(action: String, args: String) = Sonos.soap(group.host, AV, "AVTransport", action, args)
@@ -222,20 +221,5 @@ class SonosSpeaker(
         const val GROUP_VOLUME = "/MediaRenderer/GroupRenderingControl/Control"
         const val ID = "<InstanceID>0</InstanceID>"
         const val POLL_MS = 1000L
-
-        fun time(ms: Int): String {
-            val s = maxOf(0, ms / 1000)
-            return String.format(Locale.ROOT, "%d:%02d:%02d", s / 3600, s / 60 % 60, s % 60)
-        }
-
-        /** "0:03:12" to milliseconds, or -1. */
-        fun parse(t: String?): Int {
-            val p = t?.split(":") ?: return -1
-            if (p.size != 3) return -1
-            val h = p[0].toIntOrNull() ?: return -1
-            val m = p[1].toIntOrNull() ?: return -1
-            val s = p[2].toDoubleOrNull() ?: return -1
-            return (h * 3600 + m * 60 + s.toInt()) * 1000
-        }
     }
 }

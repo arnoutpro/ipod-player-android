@@ -47,6 +47,8 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
         internal val keepPlaying: Boolean,
         /** Spotify's own radio: a station link only the Spotify app itself can play. */
         internal val radio: Boolean = false,
+        /** Where in the song to start, e.g. when moving to another speaker. */
+        internal val positionMs: Int = 0,
     ) {
         companion object {
             /** trackUri sits at index in the playlist or album; null plays it from the top. */
@@ -64,6 +66,11 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
                 Request(null, "spotify:station:" + uri.removePrefix("spotify:"), -1, null, false, true, true)
 
             internal fun transfer(keepPlaying: Boolean) = Request(null, null, -1, null, true, keepPlaying)
+
+            /** Carries on with this song where it was, e.g. on another speaker. */
+            internal fun resume(contextUri: String?, trackUri: String, positionMs: Int, keepPlaying: Boolean) =
+                if (contextUri != null) Request(contextUri, trackUri, -1, null, false, keepPlaying, false, positionMs)
+                else Request(null, trackUri, 0, listOf(trackUri), false, keepPlaying, false, positionMs)
         }
     }
 
@@ -96,6 +103,17 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
     /** The Spotify Connect device to play on, or null for this phone. */
     private var targetId: String? = host.prefs().getString("spSpeaker", null)
     private var speakerName: String? = null
+
+    /** A Sonos group playing Spotify through its own Spotify account instead, or null. */
+    private var sonos: Sonos.Group? = loadSonos()
+    private val sonosSpotify = SonosSpotify(host.prefs())
+    /** The playlist or album last started, to carry on with it on another speaker. */
+    private var context: String? = null
+    /** The song whose cover and names were fetched for the Sonos, and those names. */
+    private var artKey = ""
+    private var spTitle = ""
+    private var spArtist = ""
+    private var spAlbum = ""
     private var volume = 0
     private var volumeSetAt = 0L
 
@@ -140,6 +158,7 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
         status = if (rq.transfer) "Switching speaker..." else "Starting Spotify..."
         has = true
         if (!rq.transfer) {
+            context = rq.contextUri
             list = rq.uris
             listIndex = maxOf(0, rq.index)
             listSongNearEnd = false
@@ -159,6 +178,7 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
      * background first. Opening Spotify on screen is the last resort.
      */
     private suspend fun start(rq: Request) {
+        sonos?.let { return playOnSonos(it, rq) }
         // Spotify accepts a plain list of songs over the Web API but then plays nothing, so lists
         // always go through the App Remote connection.
         if (rq.uris == null && !rq.radio) {
@@ -205,6 +225,7 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
                     if (rq.contextUri != null) {
                         body.put("context_uri", rq.contextUri)
                         if (rq.trackUri != null) body.put("offset", JSONObject().put("uri", rq.trackUri))
+                        if (rq.positionMs > 0) body.put("position_ms", rq.positionMs)
                     }
                     spotify.send("PUT", "/me/player/play?device_id=" + Spotify.enc(device), body.toString())
                 }
@@ -333,6 +354,7 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
      * the list instead. A different song in the middle means it was picked elsewhere: the list ends.
      */
     private fun followList() {
+        if (sonos != null) return // the Sonos plays its own queue
         val l = list ?: return
         if (status != null) return // still starting
         val grace = SystemClock.elapsedRealtime() - listStartedAt < START_GRACE_MS
@@ -444,11 +466,137 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
     /** The chosen speaker's id, or null for this phone. */
     fun target(): String? = targetId
 
+    /** The Sonos group Spotify plays on, or null. */
+    fun sonosTarget(): Sonos.Group? = sonos
+
     /** Sends Spotify to a speaker (null for this phone) from now on, moving what's playing. */
     fun useSpeaker(sp: Speaker?) {
         targetId = if (sp == null || sp.phone) null else sp.id
         host.prefs().edit().putString("spSpeaker", targetId).apply()
-        if (host.playback() === this && has) play(Request.transfer(playing))
+        val from = sonos ?: return run { if (host.playback() === this && has) play(Request.transfer(playing)) }
+        // Leaving the Sonos: carry on with the song where it was.
+        val rq = resumeHere()
+        setSonos(null)
+        quietly { sonosSpotify.pause(from) }
+        rq?.let { play(it) }
+    }
+
+    /**
+     * Plays Spotify on this Sonos group from now on, through the speakers' own Spotify account,
+     * moving what's playing there.
+     */
+    fun useSonos(g: Sonos.Group) {
+        if (sonos == g) return
+        val from = sonos
+        val rq = resumeHere()
+        targetId = null
+        host.prefs().edit().putString("spSpeaker", null).apply()
+        setSonos(g)
+        if (rq == null) return
+        if (from != null) {
+            quietly { sonosSpotify.pause(from) }
+        } else {
+            quietly { spotify.send("PUT", "/me/player/pause", null) } // on the phone or a Connect speaker
+        }
+        play(rq)
+    }
+
+    /** Local music took over: stop Spotify on the Sonos (on the phone it stops by itself). */
+    fun localTookOver() {
+        val g = sonos ?: return
+        if (host.service()?.castingTo(g) == true) return // the local song replaces it there anyway
+        quietly { sonosSpotify.pause(g) }
+    }
+
+    /** The song that's on now, to carry on with elsewhere; null when there is none. */
+    private fun resumeHere(): Request? {
+        if (host.playback() !== this || !has || status != null || !key.startsWith("spotify:track:")) return null
+        return Request.resume(context, key, getPosition(), playing)
+    }
+
+    private fun setSonos(g: Sonos.Group?) {
+        sonos = g
+        artKey = ""
+        host.prefs().edit().putString("spSonos", g?.let { "${it.uuid}\n${it.host}\n${it.name}" }).apply()
+    }
+
+    private fun loadSonos(): Sonos.Group? {
+        val p = host.prefs().getString("spSonos", null)?.split("\n") ?: return null
+        return if (p.size == 3) Sonos.Group(p[2], p[1], p[0]) else null
+    }
+
+    /** Runs a call on the Sonos; if it doesn't answer, finds it again (its address may have changed). */
+    private suspend fun <T> onSonos(block: (Sonos.Group) -> T): T {
+        val g = sonos ?: throw IOException("No Sonos")
+        return try {
+            io { block(g) }
+        } catch (e: IOException) {
+            val found = io { Sonos.discover(host) }.firstOrNull { it.uuid == g.uuid } ?: throw e
+            if (sonos == g) setSonos(found)
+            io { block(found) }
+        }
+    }
+
+    /** A Sonos or Spotify call whose failure doesn't matter. */
+    private fun quietly(block: () -> Unit) {
+        scope.launch {
+            try {
+                io(block)
+            } catch (e: IOException) {
+            } catch (e: JSONException) {
+            }
+        }
+    }
+
+    /**
+     * Starts the song on the Sonos. Albums and playlists go into its queue whole; Liked Songs and
+     * song lists from the chosen song on, the first one straight away and the rest while it plays.
+     */
+    private suspend fun playOnSonos(g: Sonos.Group, rq: Request) {
+        list = null
+        if (rq.radio) return fail("No radio on Sonos")
+        // The phone's own music playing on this Sonos lets go of it first.
+        host.service()?.let {
+            if (it.castingTo(g)) {
+                it.stopCasting()
+                delay(600)
+            }
+        }
+        val liked = "spotify:user:" + spotify.userId() + ":collection"
+        val songs: List<String>? = when {
+            rq.transfer -> null
+            rq.uris != null -> rq.uris.drop(maxOf(0, rq.index))
+            rq.contextUri == liked -> likedFrom(rq.trackUri)
+            rq.contextUri == null -> rq.trackUri?.let { listOf(it) }
+            else -> null
+        }
+        status = try {
+            onSonos { s ->
+                when {
+                    rq.transfer -> if (rq.keepPlaying) sonosSpotify.play(s) else sonosSpotify.pause(s)
+                    songs != null -> sonosSpotify.playSong(s, songs[0])
+                    else -> sonosSpotify.playContext(s, rq.contextUri!!, rq.trackUri)
+                }
+                if (rq.positionMs > 1000) sonosSpotify.seek(s, rq.positionMs)
+                if (!rq.keepPlaying && !rq.transfer) sonosSpotify.pause(s)
+            }
+            null
+        } catch (e: IOException) {
+            message(e)
+        }
+        if (status == null && songs != null && songs.size > 1) {
+            val rest = songs.subList(1, minOf(songs.size, MAX_SONOS_SONGS))
+            quietly { sonosSpotify.add(sonos ?: g, rest) }
+        }
+        refreshSoon(800)
+        host.redraw()
+    }
+
+    /** Liked Songs from this one on. */
+    private fun likedFrom(trackUri: String?): List<String> {
+        val all = host.spotifyLibrary().get().liked.map { it.uri }
+        val i = all.indexOf(trackUri)
+        return if (i < 0) listOfNotNull(trackUri) else all.subList(i, minOf(all.size, i + MAX_SONOS_SONGS))
     }
 
     private fun findPhone(): String? {
@@ -488,6 +636,19 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
     /** Asks Spotify whether it has a song playing or paused anywhere; runs found if so. */
     fun probe(found: Runnable) {
         if (!spotify.connected()) return
+        if (sonos != null) {
+            scope.launch {
+                val s = try {
+                    onSonos { sonosSpotify.state(it) }
+                } catch (e: IOException) {
+                    return@launch
+                }
+                if (s.uri == null) return@launch
+                readSonos(s)
+                found.run()
+            }
+            return
+        }
         scope.launch {
             val state = try {
                 io { spotify.get("/me/player") }
@@ -508,7 +669,7 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
         inFlight = true
         scope.launch {
             try {
-                read(io { spotify.get("/me/player") })
+                if (sonos != null) readSonos(onSonos { sonosSpotify.state(it) }) else read(io { spotify.get("/me/player") })
             } catch (e: IOException) {
                 status = message(e)
             } catch (e: JSONException) {
@@ -524,6 +685,76 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
         scope.launch {
             delay(ms)
             refresh()
+        }
+    }
+
+    /** What the Sonos plays: the song comes from its queue, the cover from Spotify. */
+    private fun readSonos(s: SonosSpotify.State) {
+        speakerName = sonos?.name
+        if (s.volume >= 0 && SystemClock.elapsedRealtime() - volumeSetAt > 3000) volume = s.volume
+        if (s.uri == null && s.title.isEmpty()) {
+            has = status != null
+            playing = false
+            return
+        }
+        status = null
+        has = true
+        key = s.uri ?: s.title
+        // Sonos sometimes leaves out the names; Spotify's own fill the gaps.
+        val known = s.uri != null && s.uri == artKey
+        title = s.title.ifEmpty { if (known) spTitle else "" }
+        artist = s.artist.ifEmpty { if (known) spArtist else "" }
+        album = s.album.ifEmpty { if (known) spAlbum else "" }
+        duration = s.duration
+        position = s.position
+        positionAt = SystemClock.elapsedRealtime()
+        playing = s.playing
+        shuffle = s.shuffle
+        repeat = s.repeat
+        if (s.uri == null) {
+            art = null
+        } else if (s.uri != artKey) {
+            artKey = s.uri
+            art = null
+            spTitle = ""
+            spArtist = ""
+            spAlbum = ""
+            fetchArt(s.uri)
+        }
+    }
+
+    private fun fetchArt(uri: String) {
+        scope.launch {
+            val t = try {
+                io { spotify.get("/tracks/" + uri.substringAfterLast(':')) }
+            } catch (e: IOException) {
+                return@launch
+            } catch (e: JSONException) {
+                return@launch
+            }
+            if (artKey != uri) return@launch
+            val al = t.optJSONObject("album")
+            art = Covers.pick(al?.optJSONArray("images"))
+            spTitle = t.optString("name")
+            spArtist = t.optJSONArray("artists")?.optJSONObject(0)?.optString("name").orEmpty()
+            spAlbum = al?.optString("name").orEmpty()
+            if (title.isEmpty()) title = spTitle
+            if (artist.isEmpty()) artist = spArtist
+            if (album.isEmpty()) album = spAlbum
+            host.redraw()
+        }
+    }
+
+    /** A control on the Sonos, then a fresh look at what it plays. */
+    private fun sonosCommand(block: (Sonos.Group) -> Unit) {
+        scope.launch {
+            try {
+                onSonos(block)
+            } catch (e: IOException) {
+                status = message(e)
+            }
+            refreshSoon(400)
+            host.redraw()
         }
     }
 
@@ -607,7 +838,8 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
         volumeJob?.cancel()
         volumeJob = scope.launch {
             delay(300)
-            command("PUT", "/me/player/volume?volume_percent=$volume")
+            val v = volume
+            if (sonos != null) sonosCommand { sonosSpotify.setVolume(it, v) } else command("PUT", "/me/player/volume?volume_percent=$v")
         }
     }
 
@@ -626,10 +858,13 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
         position = getPosition()
         positionAt = SystemClock.elapsedRealtime()
         playing = !playing // show it straight away; the next poll corrects it if needed
+        val p = playing
+        if (sonos != null) return sonosCommand { if (p) sonosSpotify.play(it) else sonosSpotify.pause(it) }
         command("PUT", if (playing) "/me/player/play" else "/me/player/pause")
     }
 
     override fun next() {
+        if (sonos != null) return sonosCommand { sonosSpotify.next(it) }
         val l = list
         if (l != null) {
             if (listIndex + 1 < l.size) playListAt(listIndex + 1)
@@ -644,6 +879,7 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
      */
     override fun previous() {
         if (getPosition() > 3000) return seekNow(0)
+        if (sonos != null) return sonosCommand { sonosSpotify.previous(it) }
         if (list != null) return if (listIndex > 0) playListAt(listIndex - 1) else seekNow(0)
         scope.launch {
             try {
@@ -663,6 +899,8 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
         seekJob?.cancel()
         position = ms.coerceIn(0, duration)
         positionAt = SystemClock.elapsedRealtime()
+        val at = position
+        if (sonos != null) return sonosCommand { sonosSpotify.seek(it, at) }
         command("PUT", "/me/player/seek?position_ms=$position")
     }
 
@@ -673,7 +911,8 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
         seekJob?.cancel()
         seekJob = scope.launch {
             delay(350)
-            command("PUT", "/me/player/seek?position_ms=${getPosition()}")
+            val at = getPosition()
+            if (sonos != null) sonosCommand { sonosSpotify.seek(it, at) } else command("PUT", "/me/player/seek?position_ms=$at")
         }
     }
 
@@ -684,6 +923,8 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
         /** A song this close to its end counts as finished when Spotify moves on. */
         const val END_MARGIN_MS = 8000
         const val START_GRACE_MS = 5000L
+        /** How many songs of a list go into the Sonos queue. */
+        const val MAX_SONOS_SONGS = 100
 
         /** Runs a network call off the main thread. */
         suspend fun <T> io(block: () -> T): T = withContext(Dispatchers.IO) { block() }

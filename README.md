@@ -285,10 +285,17 @@ all work. Now Playing reads "3 of 12 on Kitchen".
 
 How does a Sonos get a song off your phone? The app runs a small web server, and the speaker
 fetches each song from it over Wi-Fi. Every song gets a random address, so nothing else on the
-network can browse your music. The server stops when the music comes back to the phone. Two
-limits: the equalizer doesn't apply on a speaker, and these speakers can't play Spotify. While
-Spotify is playing they say "No Spotify", and picking one tells you so instead of starting an empty
-cast.
+network can browse your music. The server stops when the music comes back to the phone. The
+equalizer doesn't apply on a speaker.
+
+**Spotify on a Sonos** works too, through the Sonos's own Spotify account (add Spotify in the Sonos
+app once). Pick a Sonos while Spotify is playing and the song carries on there from the same spot.
+New Spotify songs keep going to that Sonos until you pick another speaker. An album or playlist goes
+into the Sonos queue whole; Liked Songs and other song lists go in from the song you picked, up to
+100 songs. The speakers stream the music from Spotify themselves.
+Now Playing reads "Spotify on Kitchen", with the cover, and Next, Previous, scrubbing and the
+volume all work. Spotify's radio doesn't play on a Sonos this way. Chromecasts don't take Spotify:
+while Spotify is playing they say "No Spotify".
 
 **Spotify Connect devices** are for Spotify. Every speaker, TV, computer or web player that
 Spotify lists for your account shows up by name. Pick one and the Spotify song moves there,
@@ -304,8 +311,7 @@ to controlling the phone. For a Sonos group, the whole group changes together.
 
 A few practical notes. The phone and the speaker have to be on the same Wi-Fi. Sonos needs nothing
 installed or linked: the app talks to the speakers directly, the way the Sonos app does. Chromecast
-uses Google's Default Media Receiver, which needs Google Play services on the phone. And Spotify
-won't send music to a Sonos from here, because Spotify doesn't list Sonos speakers to other apps.
+uses Google's Default Media Receiver, which needs Google Play services on the phone.
 
 ---
 
@@ -455,4 +461,5 @@ layout files and no image assets: everything on screen is drawn on a `Canvas`.
 | [`MusicServer`](app/src/main/java/com/arnoutpro/ipod3g/MusicServer.kt) | Serves the current song to a Sonos or Chromecast over Wi-Fi |
 | [`RemoteSpeaker`](app/src/main/java/com/arnoutpro/ipod3g/RemoteSpeaker.kt), [`CastSpeaker`](app/src/main/java/com/arnoutpro/ipod3g/CastSpeaker.kt), [`CastOptionsProvider`](app/src/main/java/com/arnoutpro/ipod3g/CastOptionsProvider.kt) | A network speaker for the player; the Chromecast version and the Cast SDK's setup |
 | [`Sonos`](app/src/main/java/com/arnoutpro/ipod3g/Sonos.kt), [`SonosSpeaker`](app/src/main/java/com/arnoutpro/ipod3g/SonosSpeaker.kt) | Finds Sonos groups on the Wi-Fi (SSDP) and controls them over UPnP |
+| [`SonosSpotify`](app/src/main/java/com/arnoutpro/ipod3g/SonosSpotify.kt) | Plays Spotify on a Sonos through its own Spotify account: fills the Sonos queue and reads back what plays |
 | [`Clicker`](app/src/main/java/com/arnoutpro/ipod3g/Clicker.kt) | The click-wheel tick, synthesised so no sound files are needed |

@@ -243,7 +243,9 @@ class MainActivity : Activity(), PlayerService.Listener {
 
     override fun onPlayerChanged() {
         if (spotifyActive && service?.isPlayingOrLoading() == true) {
-            // Local music took over (Spotify pauses itself when it loses audio focus).
+            // Local music took over (Spotify pauses itself when it loses audio focus; on a Sonos
+            // the iPod pauses it).
+            spotifyPlayer.localTookOver()
             spotifyActive = false
             spotifyPlayer.stopPolling()
         }
