@@ -689,7 +689,6 @@ class PlayerService : Service(), Playback {
             .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
             .build()
 
-        @JvmStatic
         fun playCount(ctx: Context, t: Track): Int =
             ctx.getSharedPreferences("ipod", MODE_PRIVATE).getInt("pc_${t.id}", 0)
     }

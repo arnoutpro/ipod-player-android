@@ -14,7 +14,7 @@ import android.graphics.Typeface
  * The 3rd generation iPod display: renders a low resolution screen (twice the original
  * 160x128) without anti-aliasing, so it keeps the chunky pixel look when scaled up.
  */
-class Lcd(@JvmField val host: MainActivity) {
+class Lcd(val host: MainActivity) {
     private val lo: Bitmap = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888)
     private val loCanvas = Canvas(lo)
 
@@ -33,20 +33,20 @@ class Lcd(@JvmField val host: MainActivity) {
     val titleH: Int get() = if (modern) MODERN_TITLE_H else TITLE_H
     val rowH: Int get() = if (modern) MODERN_ROW_H else ROW_H
 
-    @JvmField val text = Paint()
-    @JvmField val small = Paint()
-    @JvmField val big = Paint()
-    @JvmField val ink = Paint()
-    @JvmField val stroke = Paint()
-    @JvmField val dither = Paint()
-    @JvmField val covers = Covers(host)
+    val text = Paint()
+    val small = Paint()
+    val big = Paint()
+    val ink = Paint()
+    val stroke = Paint()
+    val dither = Paint()
+    val covers = Covers(host)
 
     // Paints of the 6th gen look.
-    @JvmField val select = Paint()
+    val select = Paint()
     private val artPlaceholder = Paint()
-    @JvmField val track = Paint()
-    @JvmField val knob = Paint()
-    @JvmField val line = Paint()
+    val track = Paint()
+    val knob = Paint()
+    val line = Paint()
     private val titleText = Paint()
     private val titleBg = Paint()
     private val battery = Paint()
@@ -70,7 +70,7 @@ class Lcd(@JvmField val host: MainActivity) {
     private var slideDir = 0
     private var slideStart = 0L
 
-    @JvmField var bg = BG_LIT
+    var bg = BG_LIT
     private val playIcon = Path()
 
     /** The backlight is off: long text stands still instead of scrolling. */
@@ -461,14 +461,12 @@ class Lcd(@JvmField val host: MainActivity) {
         const val INK = 0xFF1E2226.toInt()
 
         /** Baseline that vertically centres the paint's text in [top, top+height]. */
-        @JvmStatic
         fun baseline(p: Paint, top: Float, height: Float): Float {
             val fm = p.fontMetrics
             return top + (height - (fm.descent - fm.ascent)) / 2f - fm.ascent
         }
 
         /** Shortens text with an ellipsis so it fits in maxW. */
-        @JvmStatic
         fun fit(p: Paint, s: String, maxW: Float): String {
             if (p.measureText(s) <= maxW) return s
             val n = p.breakText(s, true, maxW - p.measureText("..."), null)

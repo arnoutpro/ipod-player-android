@@ -4,14 +4,14 @@ import android.net.Uri
 
 /** One song from the device's MediaStore. */
 class Track(
-    @JvmField val id: Long,
-    @JvmField val uri: Uri,
-    @JvmField val title: String,
-    @JvmField val artist: String,
-    @JvmField val album: String,
-    @JvmField val genre: String,
-    @JvmField val composer: String,
-    @JvmField val trackNo: Int,
-    @JvmField val durationMs: Long,
-    @JvmField val dateAdded: Long,
+    val id: Long,
+    val uri: Uri,
+    val title: String,
+    val artist: String,
+    val album: String,
+    val genre: String,
+    val composer: String,
+    val trackNo: Int,
+    val durationMs: Long,
+    val dateAdded: Long,
 )

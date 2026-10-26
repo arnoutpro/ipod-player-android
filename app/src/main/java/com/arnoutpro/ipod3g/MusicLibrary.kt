@@ -46,23 +46,19 @@ class MusicLibrary {
         const val UNKNOWN_COMPOSER = "Unknown Composer"
 
         /** Sorts like an iPod: case-insensitive and ignoring a leading "The ". */
-        @JvmField
         val NAME_ORDER: Comparator<String> = compareBy { sortKey(it) }
 
-        @JvmField
         val TITLE_ORDER: Comparator<Track> = Comparator { a, b -> NAME_ORDER.compare(a.title, b.title) }
 
         private val ALBUM_ORDER: Comparator<Track> = Comparator<Track> { a, b -> NAME_ORDER.compare(a.album, b.album) }
             .thenBy { it.trackNo }
             .thenComparator { a, b -> NAME_ORDER.compare(a.title, b.title) }
 
-        @JvmStatic
         fun sortKey(s: String): String {
             val k = s.lowercase(Locale.ROOT).trim()
             return if (k.startsWith("the ")) k.substring(4) else k
         }
 
-        @JvmStatic
         fun load(ctx: Context): MusicLibrary {
             val lib = MusicLibrary()
             val base = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI

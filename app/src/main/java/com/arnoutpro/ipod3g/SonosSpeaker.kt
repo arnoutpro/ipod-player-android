@@ -18,7 +18,7 @@ import java.io.IOException
  * is polled every second, which is also how the end of a song is noticed.
  */
 class SonosSpeaker(
-    @JvmField val group: Sonos.Group,
+    val group: Sonos.Group,
     private val listener: RemoteSpeaker.Listener,
 ) : RemoteSpeaker {
 

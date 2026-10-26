@@ -14,11 +14,11 @@ open class ListScreen private constructor(
     private val source: Supplier<List<Item>>?,
 ) : Screen(lcd, title) {
 
-    class Item(@JvmField val label: String) {
-        @JvmField var arrow = false
-        @JvmField var value: Supplier<String?>? = null
-        @JvmField var action: Runnable? = null
-        @JvmField var hold: Runnable? = null
+    class Item(val label: String) {
+        var arrow = false
+        var value: Supplier<String?>? = null
+        var action: Runnable? = null
+        var hold: Runnable? = null
 
         fun arrow() = apply { arrow = true }
 
@@ -34,7 +34,7 @@ open class ListScreen private constructor(
     /** A list rebuilt each time it is shown (e.g. the main menu with "Now Playing"). */
     constructor(lcd: Lcd, title: String, source: Supplier<List<Item>>) : this(lcd, title, source.get(), source)
 
-    @JvmField protected val items = ArrayList(first)
+    protected val items = ArrayList(first)
 
     private var emptyText = ""
     private var sel = 0

@@ -20,16 +20,16 @@ class SonosSpotify(private val prefs: SharedPreferences) {
      * repeat and volume are only read when asked for (null and -1 otherwise).
      */
     class State(
-        @JvmField val playing: Boolean,
-        @JvmField val uri: String?,
-        @JvmField val title: String,
-        @JvmField val artist: String,
-        @JvmField val album: String,
-        @JvmField val position: Int,
-        @JvmField val duration: Int,
-        @JvmField val shuffle: Boolean?,
-        @JvmField val repeat: Int,
-        @JvmField val volume: Int,
+        val playing: Boolean,
+        val uri: String?,
+        val title: String,
+        val artist: String,
+        val album: String,
+        val position: Int,
+        val duration: Int,
+        val shuffle: Boolean?,
+        val repeat: Int,
+        val volume: Int,
     )
 
     /** Sonos's number for Spotify, which differs by region; 0 until known. */

@@ -4,8 +4,8 @@ import android.graphics.Canvas
 
 /** One page on the iPod display, below the title bar. */
 abstract class Screen protected constructor(
-    @JvmField protected val lcd: Lcd,
-    @JvmField protected var title: String,
+    protected val lcd: Lcd,
+    protected var title: String,
 ) {
     fun title(): String = title
 

@@ -76,9 +76,9 @@ class Eq(private val prefs: SharedPreferences, audioSession: Int) {
         const val MAX_DB = 12
         const val CUSTOM = -1
 
-        @JvmField val LABELS = arrayOf("60", "150", "400", "1k", "2.4k", "6k", "15k")
-        @JvmField val NAMES = arrayOf("60 Hz", "150 Hz", "400 Hz", "1 kHz", "2.4 kHz", "6 kHz", "15 kHz")
-        @JvmField val PRESETS = arrayOf("Off", "Bass Booster", "Treble Booster", "Rock", "Pop", "Vocal", "Spoken Word")
+        val LABELS = arrayOf("60", "150", "400", "1k", "2.4k", "6k", "15k")
+        val NAMES = arrayOf("60 Hz", "150 Hz", "400 Hz", "1 kHz", "2.4 kHz", "6 kHz", "15 kHz")
+        val PRESETS = arrayOf("Off", "Bass Booster", "Treble Booster", "Rock", "Pop", "Vocal", "Spoken Word")
 
         // Upper edge of each band, halfway (on a log scale) to the next centre.
         private val CUTOFF = floatArrayOf(95f, 245f, 630f, 1550f, 3800f, 9500f, 20000f)

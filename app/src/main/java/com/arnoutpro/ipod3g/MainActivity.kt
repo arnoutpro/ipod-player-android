@@ -33,6 +33,11 @@ import androidx.mediarouter.media.MediaRouteSelector
 import androidx.mediarouter.media.MediaRouter
 import com.google.android.gms.cast.CastMediaControlIntent
 import com.google.android.gms.cast.framework.CastContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.IOException
 
 class MainActivity : Activity(), PlayerService.Listener {
@@ -41,6 +46,7 @@ class MainActivity : Activity(), PlayerService.Listener {
     private lateinit var view: IPodView
     private lateinit var lcd: Lcd
     private lateinit var menus: Menus
+    private val scope = MainScope()
     private lateinit var prefs: SharedPreferences
     private lateinit var clicker: Clicker
     private var service: PlayerService? = null
@@ -213,6 +219,8 @@ class MainActivity : Activity(), PlayerService.Listener {
         unbindService(connection)
         clicker.release()
         spotifyPlayer.release()
+        lcd.covers.release()
+        scope.cancel()
         super.onDestroy()
     }
 
@@ -284,13 +292,10 @@ class MainActivity : Activity(), PlayerService.Listener {
 
     private fun loadLibrary() {
         libraryRequested = true
-        Thread({
-            val lib = MusicLibrary.load(applicationContext)
-            main.post {
-                library = lib
-                lcd.reset(menus.root())
-            }
-        }, "library").start()
+        scope.launch {
+            library = withContext(Dispatchers.IO) { MusicLibrary.load(applicationContext) }
+            lcd.reset(menus.root())
+        }
     }
 
     fun rescan() = loadLibrary()
@@ -345,20 +350,20 @@ class MainActivity : Activity(), PlayerService.Listener {
     fun findSonos(changed: Runnable) {
         if (sonosSearching) return
         sonosSearching = true
-        Thread({
-            val found = try {
-                Sonos.discover(this)
-            } catch (e: IOException) {
-                null
-            } catch (e: RuntimeException) {
-                null
+        scope.launch {
+            val found = withContext(Dispatchers.IO) {
+                try {
+                    Sonos.discover(this@MainActivity)
+                } catch (e: IOException) {
+                    null
+                } catch (e: RuntimeException) {
+                    null
+                }
             }
-            main.post {
-                sonosSearching = false
-                if (found != null) sonos = found
-                changed.run()
-            }
-        }, "sonos-search").start()
+            sonosSearching = false
+            if (found != null) sonos = found
+            changed.run()
+        }
     }
 
     /** Plays the phone's own music on this Cast device. */

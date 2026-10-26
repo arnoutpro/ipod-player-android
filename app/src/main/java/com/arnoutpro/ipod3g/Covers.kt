@@ -9,8 +9,13 @@ import android.util.LruCache
 import android.util.Size
 import org.json.JSONArray
 import java.net.HttpURLConnection
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.net.URL
-import java.util.concurrent.Executors
 
 /**
  * Cover art for Now Playing: read from the song file (own songs) or downloaded (Spotify), on a
@@ -20,27 +25,34 @@ class Covers(private val host: MainActivity) {
     private val cache = LruCache<String, Bitmap>(12)
     private val missing = HashSet<String>()
     private val loading = HashSet<String>()
-    private val worker = Executors.newSingleThreadExecutor()
+    private val scope = MainScope()
+
+    // One cover at a time, in the order asked.
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val io = Dispatchers.IO.limitedParallelism(1)
 
     /** The cover for a content:// song or an https:// image, or null while loading or when there is none. */
     fun get(key: String?): Bitmap? {
         if (key.isNullOrEmpty()) return null
         cache.get(key)?.let { return it }
         if (key in missing || !loading.add(key)) return null
-        worker.execute {
-            val bmp = try {
-                if (key.startsWith("http")) download(key) else fromSong(Uri.parse(key))
-            } catch (e: Exception) {
-                null
+        scope.launch {
+            val bmp = withContext(io) {
+                try {
+                    if (key.startsWith("http")) download(key) else fromSong(Uri.parse(key))
+                } catch (e: Exception) {
+                    null
+                }
             }
-            host.runOnUiThread {
-                loading.remove(key)
-                if (bmp != null) cache.put(key, bmp) else missing.add(key)
-                host.redraw()
-            }
+            loading.remove(key)
+            if (bmp != null) cache.put(key, bmp) else missing.add(key)
+            host.redraw()
         }
         return null
     }
+
+    /** Stops loading when the iPod closes. */
+    fun release() = scope.cancel()
 
     /** True once a cover turned out not to exist, so the caller can try another. */
     fun isMissing(key: String?) = key != null && key in missing
@@ -89,7 +101,6 @@ class Covers(private val host: MainActivity) {
         private const val SIZE = 400
 
         /** From Spotify's list of a cover's sizes (largest first): the smallest of at least 300 pixels. */
-        @JvmStatic
         fun pick(images: JSONArray?): String? {
             if (images == null || images.length() == 0) return null
             var best = images.optJSONObject(0)

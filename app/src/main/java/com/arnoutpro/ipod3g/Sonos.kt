@@ -29,9 +29,9 @@ object Sonos {
 
     /** A Sonos group (or a single speaker), controlled through its coordinator. */
     class Group internal constructor(
-        @JvmField val name: String,
-        @JvmField val host: String,
-        @JvmField val uuid: String,
+        val name: String,
+        val host: String,
+        val uuid: String,
     ) {
         override fun equals(other: Any?) = other is Group && other.uuid == uuid
 
@@ -39,7 +39,6 @@ object Sonos {
     }
 
     /** Searches the network for about two seconds and returns the Sonos groups found. */
-    @JvmStatic
     @Throws(IOException::class)
     fun discover(ctx: Context): List<Group> {
         val wifi = ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
@@ -147,7 +146,6 @@ object Sonos {
     // ---- SOAP --------------------------------------------------------------------------------
 
     /** Calls a Sonos control action and returns the reply's XML. */
-    @JvmStatic
     @Throws(IOException::class)
     fun soap(host: String, path: String, service: String, action: String, args: String): String {
         val body = "<?xml version=\"1.0\" encoding=\"utf-8\"?>" +
@@ -208,7 +206,6 @@ object Sonos {
     }
 
     /** The text of the first element with this name in a SOAP reply (unescaped). */
-    @JvmStatic
     fun value(xml: String, tag: String): String? {
         try {
             val x = Xml.newPullParser()
@@ -225,14 +222,12 @@ object Sonos {
     }
 
     /** Milliseconds as Sonos writes times: "0:03:12". */
-    @JvmStatic
     fun time(ms: Int): String {
         val s = maxOf(0, ms / 1000)
         return String.format(Locale.ROOT, "%d:%02d:%02d", s / 3600, s / 60 % 60, s % 60)
     }
 
     /** "0:03:12" to milliseconds, or -1. */
-    @JvmStatic
     fun parseTime(t: String?): Int {
         val p = t?.split(":") ?: return -1
         if (p.size != 3) return -1
@@ -242,6 +237,5 @@ object Sonos {
         return (h * 3600 + m * 60 + s.toInt()) * 1000
     }
 
-    @JvmStatic
     fun escape(s: String) = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
 }

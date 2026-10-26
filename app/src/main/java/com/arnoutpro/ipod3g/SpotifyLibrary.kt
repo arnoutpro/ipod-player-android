@@ -17,40 +17,40 @@ import java.io.IOException
 class SpotifyLibrary(private val spotify: Spotify, dir: File, private val onChange: Runnable) {
 
     class Song internal constructor(
-        @JvmField val uri: String,
-        @JvmField val name: String,
-        @JvmField val artist: String,
-        @JvmField val artistId: String?,
-        @JvmField val album: String,
-        @JvmField val albumUri: String,
-        @JvmField val albumArtist: String,
-        @JvmField val disc: Int,
-        @JvmField val track: Int,
+        val uri: String,
+        val name: String,
+        val artist: String,
+        val artistId: String?,
+        val album: String,
+        val albumUri: String,
+        val albumArtist: String,
+        val disc: Int,
+        val track: Int,
         /** The album cover's https link, or null. */
-        @JvmField val image: String?,
+        val image: String?,
     )
 
     class Album internal constructor(
-        @JvmField val uri: String,
-        @JvmField val name: String,
-        @JvmField val artist: String,
+        val uri: String,
+        val name: String,
+        val artist: String,
     ) {
         /** The whole album when saved, otherwise just the liked songs from it. */
-        @JvmField val songs: MutableList<Song> = ArrayList()
+        val songs: MutableList<Song> = ArrayList()
         internal var saved = false
     }
 
-    class Artist internal constructor(@JvmField val name: String) {
-        @JvmField var id: String? = null
-        @JvmField val songs: MutableList<Song> = ArrayList()
-        @JvmField val albums: MutableList<Album> = ArrayList()
+    class Artist internal constructor(val name: String) {
+        var id: String? = null
+        val songs: MutableList<Song> = ArrayList()
+        val albums: MutableList<Album> = ArrayList()
     }
 
     /** One consistent set of lists; replaced as a whole whenever the library changes. */
-    class Snapshot internal constructor(@JvmField val liked: List<Song>) {
-        @JvmField val songs: MutableList<Song> = ArrayList()
-        @JvmField val albums: MutableList<Album> = ArrayList()
-        @JvmField val artists: MutableList<Artist> = ArrayList()
+    class Snapshot internal constructor(val liked: List<Song>) {
+        val songs: MutableList<Song> = ArrayList()
+        val albums: MutableList<Album> = ArrayList()
+        val artists: MutableList<Artist> = ArrayList()
     }
 
     private val file = File(dir, FILE)

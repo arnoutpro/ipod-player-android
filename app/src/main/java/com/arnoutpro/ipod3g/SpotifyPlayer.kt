@@ -52,16 +52,13 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
     ) {
         companion object {
             /** trackUri sits at index in the playlist or album; null plays it from the top. */
-            @JvmStatic
             fun inContext(contextUri: String?, trackUri: String?, index: Int) =
                 Request(contextUri, trackUri, index, null, false, true)
 
             /** Plays songs from start onwards, e.g. an artist's songs or Songs A-Z. */
-            @JvmStatic
             fun songs(uris: List<String>, start: Int) = Request(null, uris[start], start, uris, false, true)
 
             /** Spotify's radio of songs like this artist or song (a spotify:artist: or spotify:track: link). */
-            @JvmStatic
             fun radio(uri: String) =
                 Request(null, "spotify:station:" + uri.removePrefix("spotify:"), -1, null, false, true, true)
 
@@ -76,10 +73,10 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
 
     /** A Spotify Connect device: a speaker, TV, computer or this phone. */
     class Speaker internal constructor(
-        @JvmField val id: String,
-        @JvmField val name: String,
-        @JvmField val type: String,
-        @JvmField val phone: Boolean,
+        val id: String,
+        val name: String,
+        val type: String,
+        val phone: Boolean,
     )
 
     private val scope = MainScope()

@@ -44,9 +44,9 @@ class Spotify(private val prefs: SharedPreferences) {
 
     /** An HTTP error from Spotify, with its message shortened for the LCD. */
     class ApiException internal constructor(
-        @JvmField val status: Int,
+        val status: Int,
         message: String,
-        @JvmField val reason: String,
+        val reason: String,
     ) : IOException(message) {
         /** Seconds Spotify asks to wait after "too many requests". */
         internal var retryAfter = 0
@@ -164,7 +164,6 @@ class Spotify(private val prefs: SharedPreferences) {
      * Follows "next" links and gathers every item of a paged list. Paths leave out "limit":
      * Spotify's default page size is always allowed, while its maximum changes over time.
      */
-    @JvmOverloads
     @Throws(IOException::class, JSONException::class)
     fun all(path: String, wrapper: String?, pages: Pages? = null): List<JSONObject> =
         all(path, wrapper, MAX_ITEMS, pages)
@@ -251,7 +250,6 @@ class Spotify(private val prefs: SharedPreferences) {
         /** Stops runaway paging through enormous libraries. */
         private const val MAX_ITEMS = 2000
 
-        @JvmStatic
         fun enc(s: String): String = URLEncoder.encode(s, "UTF-8")
 
         /** The value as a string, or null when it's missing or JSON null. */

@@ -11,7 +11,7 @@ import java.io.IOException
 import kotlin.math.roundToInt
 
 /** A Chromecast, Google TV or Nest speaker, through a Cast session. */
-class CastSpeaker(@JvmField val session: CastSession, private val listener: RemoteSpeaker.Listener) : RemoteSpeaker {
+class CastSpeaker(val session: CastSession, private val listener: RemoteSpeaker.Listener) : RemoteSpeaker {
     private val client: RemoteMediaClient = session.remoteMediaClient!!
     private var finishHandled = false
 

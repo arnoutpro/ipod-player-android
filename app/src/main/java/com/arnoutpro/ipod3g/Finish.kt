@@ -2,29 +2,28 @@ package com.arnoutpro.ipod3g
 
 /** The colours of the iPod's plastic, wheel and buttons under the acrylic. */
 class Finish private constructor(
-    @JvmField val body: IntArray,
-    @JvmField val bezelRim: Int,
-    @JvmField val bezel: Int,
-    @JvmField val floor: Int,
-    @JvmField val wheelHi: Int,
-    @JvmField val wheelLo: Int,
-    @JvmField val centerTop: Int,
-    @JvmField val centerBottom: Int,
-    @JvmField val btnTop: Int,
-    @JvmField val btnBottom: Int,
-    @JvmField val glyphOff: Int,
-    @JvmField val pressBtn: Int,
-    @JvmField val pressWheel: Int,
-    @JvmField val pressCenter: Int,
+    val body: IntArray,
+    val bezelRim: Int,
+    val bezel: Int,
+    val floor: Int,
+    val wheelHi: Int,
+    val wheelLo: Int,
+    val centerTop: Int,
+    val centerBottom: Int,
+    val btnTop: Int,
+    val btnBottom: Int,
+    val glyphOff: Int,
+    val pressBtn: Int,
+    val pressWheel: Int,
+    val pressCenter: Int,
     /** Scales the hole shadows, which barely show on black and need more weight there. */
-    @JvmField val wallWeight: Float,
-    @JvmField val edgeDark: Int,
-    @JvmField val edgeLight: Int,
-    @JvmField val gloss: IntArray,
+    val wallWeight: Float,
+    val edgeDark: Int,
+    val edgeLight: Int,
+    val gloss: IntArray,
 ) {
     companion object {
         /** The real thing: white plastic, a touch cooler and darker than pure white under the acrylic. */
-        @JvmField
         val WHITE = Finish(
             intArrayOf(0xFFFAFBFB.toInt(), 0xFFF3F4F4.toInt(), 0xFFE8E9E8.toInt()),
             0xFFE2E2DF.toInt(), 0xFF26292B.toInt(), 0xFFE6E7E5.toInt(),
@@ -36,7 +35,6 @@ class Finish private constructor(
         )
 
         /** It never existed: gloss black plastic with a graphite wheel and buttons. */
-        @JvmField
         val BLACK = Finish(
             intArrayOf(0xFF202124.toInt(), 0xFF16171A.toInt(), 0xFF0D0E10.toInt()),
             0xFF34363A.toInt(), 0xFF08090A.toInt(), 0xFF070809.toInt(),

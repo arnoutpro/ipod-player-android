@@ -31,7 +31,7 @@ import kotlin.math.roundToInt
 /** Draws the whole iPod and turns touches on the wheel and buttons into iPod input. */
 @SuppressLint("ViewConstructor")
 class IPodView(private val host: MainActivity) : View(host), SensorEventListener {
-    @JvmField val lcd = Lcd(host)
+    val lcd = Lcd(host)
 
     private val handler = Handler(Looper.getMainLooper())
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
