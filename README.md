@@ -128,8 +128,8 @@ The menus are the original iPod's, with a Spotify menu added.
 | Menu | What's in it |
 | --- | --- |
 | **Playlists** | On-The-Go (your own quick playlist), Recently Added, Top 25 Most Played |
-| **Browse** | Artists, Albums, Genres, Songs, Composers |
-| **Spotify** | Playlists, Artists, Albums, Songs, Recently Liked, Disconnect. See [Spotify](#spotify). |
+| **Browse** | Cover Flow (6th Gen look), Artists, Albums, Genres, Songs, Composers |
+| **Spotify** | Cover Flow (6th Gen look), Playlists, Artists, Albums, Songs, Recently Liked, Disconnect. See [Spotify](#spotify). |
 | **Extras** | Clock, Games › Brick |
 | **Settings** | About, Shuffle, Repeat, EQ, Speakers, Backlight Timer, Clicker, Menu Style, Color, Rescan Music |
 | **Shuffle Songs** | Plays your whole library in random order |
@@ -363,6 +363,10 @@ wheel stay the same; only what's on the LCD changes.
     cover from your own songs and your Spotify Liked Songs, changing with a fade every few seconds.
     While **Now Playing** is highlighted it shows the playing song's cover. Deeper lists and
     Settings use the full width.
+  - **Cover Flow**, at the top of Browse and of Spotify: your albums' covers in a row on black,
+    the chosen one facing you and the others turned aside, all with a reflection. The wheel flips
+    through them, the album and artist show below, and the centre button opens the album. MENU
+    goes back.
   - Now Playing shows the cover turned slightly away with a faint reflection below it, the title,
     artist, album and "3 of 12" beside it, and the elapsed and remaining time either side of a blue
     progress bar. Songs without a cover get a grey square with a ♪.
@@ -449,7 +453,8 @@ layout files and no image assets: everything on screen is drawn on a `Canvas`.
 | [`IPodView`](app/src/main/java/com/arnoutpro/ipod3g/IPodView.kt) | Draws the face, acrylic and lighting; turns touches into wheel and button input; backlight and tilt sensor |
 | [`Finish`](app/src/main/java/com/arnoutpro/ipod3g/Finish.kt) | The white and black colour palettes |
 | [`Lcd`](app/src/main/java/com/arnoutpro/ipod3g/Lcd.kt) | The 320 × 292 LCD bitmap: title bar, screen stack and slide animation, fonts, marquee text; the 3rd Gen and 6th Gen looks and the 6th Gen album art beside the menus |
-| [`Covers`](app/src/main/java/com/arnoutpro/ipod3g/Covers.kt) | Cover art from your song files or Spotify, loaded in the background and cached |
+| [`Covers`](app/src/main/java/com/arnoutpro/ipod3g/Covers.kt) | Cover art from your song files or Spotify, loaded in the background (the newest asked first) and cached; drawing covers in perspective |
+| [`CoverFlowScreen`](app/src/main/java/com/arnoutpro/ipod3g/CoverFlowScreen.kt) | Cover Flow: the album carousel of the 6th Gen look |
 | [`Screen`](app/src/main/java/com/arnoutpro/ipod3g/Screen.kt), [`ListScreen`](app/src/main/java/com/arnoutpro/ipod3g/ListScreen.kt) | A page on the LCD; the classic menu list with highlight, arrows and scroll bar |
 | [`Menus`](app/src/main/java/com/arnoutpro/ipod3g/Menus.kt) | The whole menu tree, including the Spotify menus |
 | [`NowPlayingScreen`](app/src/main/java/com/arnoutpro/ipod3g/NowPlayingScreen.kt), [`EqScreen`](app/src/main/java/com/arnoutpro/ipod3g/EqScreen.kt), [`ClockScreen`](app/src/main/java/com/arnoutpro/ipod3g/ClockScreen.kt), [`BrickScreen`](app/src/main/java/com/arnoutpro/ipod3g/BrickScreen.kt) | The other screens |

@@ -2,6 +2,12 @@ package com.arnoutpro.ipod3g
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.Shader
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
@@ -10,7 +16,7 @@ import android.util.Size
 import org.json.JSONArray
 import java.net.HttpURLConnection
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -18,37 +24,62 @@ import kotlinx.coroutines.withContext
 import java.net.URL
 
 /**
- * Cover art for Now Playing: read from the song file (own songs) or downloaded (Spotify), on a
- * background thread. [get] returns null until it has arrived, then the screen is redrawn.
+ * Cover art: read from the song file (own songs) or downloaded (Spotify), on a background thread.
+ * [get] returns null until it has arrived, then the screen is redrawn.
  */
 class Covers(private val host: MainActivity) {
-    private val cache = LruCache<String, Bitmap>(12)
+    // Enough for a screenful of Cover Flow and a bit either side.
+    private val cache = LruCache<String, Bitmap>(40)
     private val missing = HashSet<String>()
-    private val loading = HashSet<String>()
+    /** Asked for and not loaded yet; the newest is loaded first, so the covers on screen come first. */
+    private val waiting = ArrayDeque<String>()
+    private var worker: Job? = null
     private val scope = MainScope()
-
-    // One cover at a time, in the order asked.
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val io = Dispatchers.IO.limitedParallelism(1)
+    private var placeholder: Bitmap? = null
 
     /** The cover for a content:// song or an https:// image, or null while loading or when there is none. */
     fun get(key: String?): Bitmap? {
         if (key.isNullOrEmpty()) return null
         cache.get(key)?.let { return it }
-        if (key in missing || !loading.add(key)) return null
-        scope.launch {
-            val bmp = withContext(io) {
+        if (key in missing || key in waiting) return null
+        waiting.addLast(key)
+        // Flipping fast through Cover Flow passes covers nobody waits for any more.
+        while (waiting.size > MAX_WAITING) waiting.removeFirst()
+        if (worker?.isActive != true) worker = scope.launch { work() }
+        return null
+    }
+
+    private suspend fun work() {
+        while (waiting.isNotEmpty()) {
+            val key = waiting.last()
+            val bmp = withContext(Dispatchers.IO) {
                 try {
                     if (key.startsWith("http")) download(key) else fromSong(Uri.parse(key))
                 } catch (e: Exception) {
                     null
                 }
             }
-            loading.remove(key)
+            waiting.remove(key)
             if (bmp != null) cache.put(key, bmp) else missing.add(key)
             host.redraw()
         }
-        return null
+    }
+
+    /** A grey square with a note, like the iPod's own, for songs without a cover. */
+    fun placeholder(): Bitmap {
+        placeholder?.let { return it }
+        val b = Bitmap.createBitmap(300, 300, Bitmap.Config.ARGB_8888)
+        val pc = Canvas(b)
+        val p = Paint(Paint.ANTI_ALIAS_FLAG)
+        p.shader = LinearGradient(0f, 0f, 0f, 300f, 0xFFC9CDD2.toInt(), 0xFF8E949B.toInt(), Shader.TileMode.CLAMP)
+        pc.drawRect(0f, 0f, 300f, 300f, p)
+        p.shader = null
+        p.color = Color.WHITE
+        p.textSize = 180f
+        p.textAlign = Paint.Align.CENTER
+        pc.drawText("\u266A", 150f, Lcd.baseline(p, 0f, 300f), p)
+        placeholder = b
+        return b
     }
 
     /** Stops loading when the iPod closes. */
@@ -94,11 +125,13 @@ class Covers(private val host: MainActivity) {
         while (o.outWidth / (sample * 2) >= SIZE) sample *= 2
         o.inJustDecodeBounds = false
         o.inSampleSize = sample
+        o.inPreferredConfig = Bitmap.Config.RGB_565 // covers have no transparency: half the memory
         return BitmapFactory.decodeByteArray(b, 0, b.size, o)
     }
 
     companion object {
         private const val SIZE = 400
+        private const val MAX_WAITING = 16
 
         /** From Spotify's list of a cover's sizes (largest first): the smallest of at least 300 pixels. */
         fun pick(images: JSONArray?): String? {
@@ -110,5 +143,34 @@ class Covers(private val host: MainActivity) {
             }
             return best?.optString("url")?.ifEmpty { null }
         }
+    }
+}
+
+/**
+ * Draws a cover into any four-cornered shape: turned in perspective, or mirrored below its bottom
+ * edge as a reflection. Corners go top-left, top-right, bottom-right, bottom-left.
+ */
+class CoverQuad {
+    private val matrix = Matrix()
+    private val src = FloatArray(8)
+    private val dst = FloatArray(8)
+
+    fun draw(
+        c: Canvas, b: Bitmap, paint: Paint, mirrored: Boolean,
+        ax: Float, ay: Float, bx: Float, by: Float, cx: Float, cy: Float, dx: Float, dy: Float,
+    ) {
+        val w = b.width.toFloat()
+        val h = b.height.toFloat()
+        val top = if (mirrored) h else 0f
+        val bottom = if (mirrored) 0f else h
+        src[0] = 0f; src[1] = top; src[2] = w; src[3] = top
+        src[4] = w; src[5] = bottom; src[6] = 0f; src[7] = bottom
+        dst[0] = ax; dst[1] = ay; dst[2] = bx; dst[3] = by
+        dst[4] = cx; dst[5] = cy; dst[6] = dx; dst[7] = dy
+        matrix.setPolyToPoly(src, 0, dst, 0, 4)
+        c.save()
+        c.concat(matrix)
+        c.drawBitmap(b, 0f, 0f, paint)
+        c.restore()
     }
 }

@@ -1,11 +1,9 @@
 package com.arnoutpro.ipod3g
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
-import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Shader
@@ -26,23 +24,14 @@ class NowPlayingScreen(lcd: Lcd) : Screen(lcd, "Now Playing") {
     private val bgPaint = Paint()
 
     // The 6th gen look: cover art on the left, a blue progress bar.
-    private val matrix = Matrix()
-    private val src = FloatArray(8)
-    private val dst = FloatArray(8)
+    private val quad = CoverQuad()
     private val reflFade = Paint()
     private var reflBg = 0
-    private var placeholder: Bitmap? = null
     private val artPaint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
     private val frame = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 1f
         color = 0xFFB4B8BE.toInt()
-    }
-    private val noArt = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val note = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
-        textSize = 72f
-        textAlign = Paint.Align.CENTER
     }
     private val barFill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         shader = LinearGradient(0f, 0f, 0f, BAR_H, 0xFF7BBBF8.toInt(), 0xFF1F6FD8.toInt(), Shader.TileMode.CLAMP)
@@ -182,26 +171,20 @@ class NowPlayingScreen(lcd: Lcd) : Screen(lcd, "Now Playing") {
         val text = lcd.text
         drawModeIcons(c, ps, w)
 
-        val cover = lcd.covers.get(ps.artUri()) ?: noCover()
+        val cover = lcd.covers.get(ps.artUri()) ?: lcd.covers.placeholder()
         val size = 118f
         val x0 = 16f
         val y0 = 22f
         // The right edge is further away: narrower and shorter.
         val x1 = x0 + size * 0.86f
-        quad(x0, y0, x1, y0 + size * TILT, x1, y0 + size * (1 - TILT), x0, y0 + size)
-        c.save()
-        c.concat(map(cover, false))
-        c.drawBitmap(cover, 0f, 0f, artPaint)
-        c.restore()
+        quad.draw(c, cover, artPaint, false, x0, y0, x1, y0 + size * TILT, x1, y0 + size * (1 - TILT), x0, y0 + size)
 
         // The reflection: the cover mirrored below its bottom edge, fading out.
         val reflH = size * 0.32f
         val bottom = y0 + size
-        quad(x0, bottom, x1, bottom - size * TILT, x1, bottom + size * (1 - 3 * TILT), x0, bottom + size)
         c.save()
         c.clipRect(x0, bottom - size * TILT, x1, bottom + reflH)
-        c.concat(map(cover, true))
-        c.drawBitmap(cover, 0f, 0f, artPaint)
+        quad.draw(c, cover, artPaint, true, x0, bottom, x1, bottom - size * TILT, x1, bottom + size * (1 - 3 * TILT), x0, bottom + size)
         c.restore()
         if (reflBg != lcd.bg) {
             reflBg = lcd.bg
@@ -235,37 +218,6 @@ class NowPlayingScreen(lcd: Lcd) : Screen(lcd, "Now Playing") {
         c.drawText(elapsed, 10f, tb, text)
         c.drawText(rem, w - 10 - text.measureText(rem), tb, text)
         modernBar(c, 62f, by, w - 124f, at / dur.toFloat(), mode == SCRUB)
-    }
-
-    private fun quad(ax: Float, ay: Float, bx: Float, by: Float, cx: Float, cy: Float, dx: Float, dy: Float) {
-        dst[0] = ax; dst[1] = ay; dst[2] = bx; dst[3] = by
-        dst[4] = cx; dst[5] = cy; dst[6] = dx; dst[7] = dy
-    }
-
-    /** Maps the bitmap's corners onto [dst] (upside down for the reflection). */
-    private fun map(b: Bitmap, flip: Boolean): Matrix {
-        val bw = b.width.toFloat()
-        val bh = b.height.toFloat()
-        if (flip) {
-            src[0] = 0f; src[1] = bh; src[2] = bw; src[3] = bh; src[4] = bw; src[5] = 0f; src[6] = 0f; src[7] = 0f
-        } else {
-            src[0] = 0f; src[1] = 0f; src[2] = bw; src[3] = 0f; src[4] = bw; src[5] = bh; src[6] = 0f; src[7] = bh
-        }
-        matrix.setPolyToPoly(src, 0, dst, 0, 4)
-        return matrix
-    }
-
-    /** A grey square with a note, like the iPod's own, for songs without a cover. */
-    private fun noCover(): Bitmap {
-        placeholder?.let { return it }
-        val b = Bitmap.createBitmap(300, 300, Bitmap.Config.ARGB_8888)
-        val pc = Canvas(b)
-        noArt.shader = LinearGradient(0f, 0f, 0f, 300f, 0xFFC9CDD2.toInt(), 0xFF8E949B.toInt(), Shader.TileMode.CLAMP)
-        pc.drawRect(0f, 0f, 300f, 300f, noArt)
-        note.textSize = 180f
-        pc.drawText("\u266A", 150f, Lcd.baseline(note, 0f, 300f), note)
-        placeholder = b
-        return b
     }
 
     /** A left-aligned line that scrolls when it doesn't fit; returns true while scrolling. */

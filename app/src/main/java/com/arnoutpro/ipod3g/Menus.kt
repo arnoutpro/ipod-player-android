@@ -187,6 +187,17 @@ class Menus(private val lcd: Lcd) {
         // Liked Songs, saved albums and followed artists, browsed like the iPod's own music.
         val lib = host.spotifyLibrary()
         lib.refresh()
+        if (host.sixthGen()) {
+            items.add(
+                sub("Cover Flow") {
+                    CoverFlowScreen(lcd) {
+                        lib.get().albums.map { a ->
+                            CoverFlowScreen.Album(a.name, a.artist, a.songs.firstNotNullOfOrNull { it.image }) { spotifyAlbum(a) }
+                        }
+                    }
+                }
+            )
+        }
         items.add(sub("Playlists", ::spotifyPlaylists))
         items.add(
             sub("Artists") {
@@ -346,7 +357,9 @@ class Menus(private val lcd: Lcd) {
 
     private fun browse(): Screen = ListScreen(
         lcd, "Browse",
-        listOf(
+        listOfNotNull(
+            // The iPod classic's album carousel, in the look it came with.
+            if (host.sixthGen()) sub("Cover Flow", ::coverFlow) else null,
             sub("Artists", ::artists),
             sub("Albums") { albums("Albums", host.library().albums()) },
             sub("Genres", ::genres),
@@ -354,6 +367,17 @@ class Menus(private val lcd: Lcd) {
             sub("Composers", ::composers),
         ),
     )
+
+    /** Your own albums in Cover Flow; each cover comes from the album's first song. */
+    private fun coverFlow(): Screen = CoverFlowScreen(lcd) {
+        val lib = host.library()
+        lib.albums().map { al ->
+            val songs = lib.byAlbum(al)
+            CoverFlowScreen.Album(al, songs.firstOrNull()?.artist.orEmpty(), songs.firstOrNull()?.uri?.toString()) {
+                songs(al, lib.byAlbum(al), false)
+            }
+        }
+    }
 
     private fun artists(): Screen {
         val lib = host.library()
