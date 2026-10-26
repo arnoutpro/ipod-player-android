@@ -21,11 +21,16 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # The build number is GitHub's run number plus 9: early test builds on the phone ran 9
+      # ahead, and Android won't install a lower version over a higher one.
+      - name: Set build number
+        run: echo "BUILD_NUMBER=$(( ${{ github.run_number }} + 9 ))" >> "$GITHUB_ENV"
+
       - name: Build signed release APK
         run: ./gradlew --no-daemon assembleRelease
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/release/app-release.apk iPod3G-v1.0.${{ github.run_number }}.apk
+        run: cp app/build/outputs/apk/release/app-release.apk iPod3G-v1.0.${{ env.BUILD_NUMBER }}.apk
 
       - uses: actions/upload-artifact@v4
         with:
@@ -35,8 +40,8 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: iPod 3G v1.0.${{ github.run_number }}
+          tag_name: v1.0.${{ env.BUILD_NUMBER }}
+          name: iPod 3G v1.0.${{ env.BUILD_NUMBER }}
           target_commitish: ${{ github.sha }}
           files: iPod3G-*.apk
           body: |

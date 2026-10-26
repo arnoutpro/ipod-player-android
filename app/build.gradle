@@ -11,9 +11,10 @@ android {
         applicationId 'com.arnoutpro.ipod3g'
         minSdk 26
         targetSdk 34
-        def run = (System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger()
-        versionCode run
-        versionName "1.0.${run}"
+        // Set by the GitHub workflow; for a local build, the number the next release will get.
+        def build = (System.getenv('BUILD_NUMBER') ?: '1').toInteger()
+        versionCode build
+        versionName "1.0.${build}"
     }
 
     // A fixed key that lives in the repo, so every build can be installed over the

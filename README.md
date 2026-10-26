@@ -412,12 +412,13 @@ The APK lands in `app/build/outputs/apk/release/`. If Gradle can't find the SDK,
 build, local or from GitHub, installs over the previous one. It's fine for a personal sideloaded
 app; never use it for the Play Store.
 
-**Version numbers:** the version code is GitHub's run number (`1.0.N`). A local build is version 1
-unless you set `GITHUB_RUN_NUMBER`. Android refuses to install a lower version over a higher one, so
-to test a local build over a release, build with the latest release's number or higher:
+**Version numbers:** the version (`1.0.N`) is GitHub's run number plus 9, set by the workflow as
+`BUILD_NUMBER`; the 9 makes up for test builds that once ran ahead of GitHub's count. A local build
+is version 1 unless you set `BUILD_NUMBER`. Android refuses to install a lower version over a higher
+one, so to test a local build over a release, build with the number the next release will get:
 
 ```bash
-GITHUB_RUN_NUMBER=18 ./gradlew assembleRelease
+BUILD_NUMBER=47 ./gradlew assembleRelease
 ```
 
 **Libraries:**
