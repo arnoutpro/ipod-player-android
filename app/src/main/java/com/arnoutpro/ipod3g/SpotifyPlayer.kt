@@ -114,6 +114,8 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
     private var spTitle = ""
     private var spArtist = ""
     private var spAlbum = ""
+    /** Counts Sonos polls: play mode and volume are read on every fifth. */
+    private var sonosPolls = 0
     private var volume = 0
     private var volumeSetAt = 0L
 
@@ -639,7 +641,7 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
         if (sonos != null) {
             scope.launch {
                 val s = try {
-                    onSonos { sonosSpotify.state(it) }
+                    onSonos { sonosSpotify.state(it, true) }
                 } catch (e: IOException) {
                     return@launch
                 }
@@ -669,7 +671,12 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
         inFlight = true
         scope.launch {
             try {
-                if (sonos != null) readSonos(onSonos { sonosSpotify.state(it) }) else read(io { spotify.get("/me/player") })
+                if (sonos != null) {
+                    val settings = sonosPolls++ % 5 == 0
+                    readSonos(onSonos { sonosSpotify.state(it, settings) })
+                } else {
+                    read(io { spotify.get("/me/player") })
+                }
             } catch (e: IOException) {
                 status = message(e)
             } catch (e: JSONException) {
@@ -709,8 +716,8 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
         position = s.position
         positionAt = SystemClock.elapsedRealtime()
         playing = s.playing
-        shuffle = s.shuffle
-        repeat = s.repeat
+        s.shuffle?.let { shuffle = it }
+        if (s.repeat >= 0) repeat = s.repeat
         if (s.uri == null) {
             art = null
         } else if (s.uri != artKey) {

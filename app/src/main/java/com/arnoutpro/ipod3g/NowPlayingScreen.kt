@@ -103,7 +103,13 @@ class NowPlayingScreen(lcd: Lcd) : Screen(lcd, "Now Playing") {
         lcd.push(lcd.host.menus().speakers())
     }
 
-    override fun frameDelay(now: Long): Long = if (scrolling || mode != NORMAL) 33 else 250
+    override fun frameDelay(now: Long): Long {
+        if (scrolling || mode != NORMAL) return 33
+        // Otherwise only the times change: redraw just after the song's next whole second.
+        val ps = lcd.host.playback()
+        if (ps == null || !ps.isPlayingOrLoading()) return 1000
+        return 1000L - ps.getPosition() % 1000 + 20
+    }
 
     override fun draw(c: Canvas, w: Int, h: Int, now: Long) {
         val ps = lcd.host.playback()

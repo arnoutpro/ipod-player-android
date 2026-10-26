@@ -434,9 +434,9 @@ class MainActivity : Activity(), PlayerService.Listener {
     }
 
     /** The iPod classic (6th gen) look: colour, smooth text and album art beside the top menus. */
-    fun splitMenus() = prefs.getBoolean("split", false)
+    fun sixthGen() = prefs.getBoolean("split", false) // named after the first, two-column design
 
-    fun setSplitMenus(on: Boolean) {
+    fun setSixthGen(on: Boolean) {
         prefs.edit().putBoolean("split", on).apply()
     }
 

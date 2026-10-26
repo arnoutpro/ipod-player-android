@@ -127,6 +127,23 @@ object Sonos {
         return out
     }
 
+    // ---- group volume ------------------------------------------------------------------------
+
+    private const val GROUP_VOLUME = "/MediaRenderer/GroupRenderingControl/Control"
+    private const val ID = "<InstanceID>0</InstanceID>"
+
+    /** The whole group's volume, 0-100, or null when the speaker didn't say. */
+    @Throws(IOException::class)
+    fun groupVolume(host: String): Int? =
+        value(soap(host, GROUP_VOLUME, "GroupRenderingControl", "GetGroupVolume", ID), "CurrentVolume")?.toIntOrNull()
+
+    /** Sets the whole group's volume, keeping the speakers' volumes in proportion. */
+    @Throws(IOException::class)
+    fun setGroupVolume(host: String, percent: Int) {
+        soap(host, GROUP_VOLUME, "GroupRenderingControl", "SnapshotGroupVolume", ID)
+        soap(host, GROUP_VOLUME, "GroupRenderingControl", "SetGroupVolume", "$ID<DesiredVolume>$percent</DesiredVolume>")
+    }
+
     // ---- SOAP --------------------------------------------------------------------------------
 
     /** Calls a Sonos control action and returns the reply's XML. */

@@ -19,8 +19,9 @@ class Lcd(@JvmField val host: MainActivity) {
     private val loCanvas = Canvas(lo)
 
     // The 6th gen look is drawn at three times the size, so its smooth text stays sharp.
-    private val hi: Bitmap = Bitmap.createBitmap(W * HI, H * HI, Bitmap.Config.ARGB_8888)
-    private val hiCanvas = Canvas(hi).apply { scale(HI.toFloat(), HI.toFloat()) }
+    // Made the first time that look is switched on.
+    private val hi: Bitmap by lazy { Bitmap.createBitmap(W * HI, H * HI, Bitmap.Config.ARGB_8888) }
+    private val hiCanvas by lazy { Canvas(hi).apply { scale(HI.toFloat(), HI.toFloat()) } }
 
     /** True for the iPod classic (6th/7th gen) look: split menus, colour and smooth text. */
     var modern = false
@@ -42,7 +43,7 @@ class Lcd(@JvmField val host: MainActivity) {
 
     // Paints of the 6th gen look.
     @JvmField val select = Paint()
-    @JvmField val selectDim = Paint()
+    private val artPlaceholder = Paint()
     @JvmField val track = Paint()
     @JvmField val knob = Paint()
     @JvmField val line = Paint()
@@ -72,6 +73,9 @@ class Lcd(@JvmField val host: MainActivity) {
     @JvmField var bg = BG_LIT
     private val playIcon = Path()
 
+    /** The backlight is off: long text stands still instead of scrolling. */
+    private var dark = false
+
     init {
         for (p in arrayOf(text, small, big)) {
             p.isAntiAlias = false
@@ -98,14 +102,14 @@ class Lcd(@JvmField val host: MainActivity) {
 
         // The classic's glossy blue highlight; the list you came from keeps a grey one.
         select.shader = LinearGradient(0f, 0f, 0f, MODERN_ROW_H.toFloat(), 0xFF6DB3F7.toInt(), 0xFF1F6FD8.toInt(), Shader.TileMode.CLAMP)
-        selectDim.shader = LinearGradient(0f, 0f, 0f, MODERN_ROW_H.toFloat(), 0xFFDCDEE1.toInt(), 0xFFAEB2B8.toInt(), Shader.TileMode.CLAMP)
+        artPlaceholder.color = 0xFFD3D6DA.toInt() // until the first cover arrives
         titleBg.shader = LinearGradient(0f, 0f, 0f, MODERN_TITLE_H.toFloat(), 0xFFFCFCFC.toInt(), 0xFFC9CDD2.toInt(), Shader.TileMode.CLAMP)
         battery.shader = LinearGradient(0f, 6f, 0f, 16f, 0xFFB4F08C.toInt(), 0xFF3DAA1E.toInt(), Shader.TileMode.CLAMP)
         playBlue.shader = LinearGradient(0f, 6f, 0f, 16f, 0xFF8CC8FF.toInt(), 0xFF2A7BE0.toInt(), Shader.TileMode.CLAMP)
         track.color = 0xFFE6E7E9.toInt()
         knob.color = 0xFF9DA2A9.toInt()
         line.color = 0xFF9EA3AA.toInt()
-        for (p in arrayOf(select, selectDim, titleBg, battery, playBlue, track, knob, line)) p.isAntiAlias = true
+        for (p in arrayOf(select, titleBg, battery, playBlue, track, knob, line)) p.isAntiAlias = true
         shadow.shader = LinearGradient(0f, 0f, SHADOW_W, 0f, 0x66000000, 0x00000000, Shader.TileMode.CLAMP)
         titleText.isAntiAlias = true
         titleText.typeface = bold
@@ -199,7 +203,8 @@ class Lcd(@JvmField val host: MainActivity) {
 
     /** Renders into [bitmap]; returns the delay until the next frame, or -1. */
     fun render(lit: Boolean, now: Long): Long {
-        theme(host.splitMenus())
+        dark = !lit
+        theme(host.sixthGen())
         bg = if (modern) (if (lit) MODERN_LIT else MODERN_DARK) else if (lit) BG_LIT else BG_DARK
         val c = if (modern) hiCanvas else loCanvas
         c.drawColor(bg)
@@ -299,7 +304,7 @@ class Lcd(@JvmField val host: MainActivity) {
             else -> maxOf(FADE_FRAME_MS, PREVIEW_MS - (now - previewSince))
         }
         if (art == null) {
-            c.drawRect(0f, 0f, w.toFloat(), h.toFloat(), selectDim)
+            c.drawRect(0f, 0f, w.toFloat(), h.toFloat(), artPlaceholder)
             return
         }
         previewOld?.let { if (fade < 1f) cover(c, it, w, h, 255) }
@@ -402,8 +407,9 @@ class Lcd(@JvmField val host: MainActivity) {
      */
     fun marquee(c: Canvas, p: Paint, s: String, x: Float, w: Float, baseline: Float, now: Long, since: Long): Boolean {
         val tw = p.measureText(s)
-        if (tw <= w) {
-            c.drawText(s, x + (w - tw) / 2f, baseline, p)
+        if (tw <= w || dark) {
+            val t = if (tw <= w) s else fit(p, s, w)
+            c.drawText(t, x + (w - p.measureText(t)) / 2f, baseline, p)
             return false
         }
         val cycle = tw + 60
@@ -420,8 +426,8 @@ class Lcd(@JvmField val host: MainActivity) {
     /** Left-aligned marquee used for long highlighted menu rows. */
     fun marqueeLeft(c: Canvas, p: Paint, s: String, x: Float, w: Float, baseline: Float, now: Long, since: Long): Boolean {
         val tw = p.measureText(s)
-        if (tw <= w) {
-            c.drawText(s, x, baseline, p)
+        if (tw <= w || dark) {
+            c.drawText(if (tw <= w) s else fit(p, s, w), x, baseline, p)
             return false
         }
         val cycle = tw + 60

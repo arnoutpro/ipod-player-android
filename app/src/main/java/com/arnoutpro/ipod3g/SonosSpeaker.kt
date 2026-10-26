@@ -132,12 +132,7 @@ class SonosSpeaker(
         volumeJob = scope.launch {
             delay(300)
             val v = vol
-            send {
-                // A snapshot first keeps the speakers' volumes in proportion within the group.
-                Sonos.soap(group.host, GROUP_VOLUME, "GroupRenderingControl", "SnapshotGroupVolume", ID)
-                Sonos.soap(group.host, GROUP_VOLUME, "GroupRenderingControl", "SetGroupVolume",
-                    "$ID<DesiredVolume>$v</DesiredVolume>")
-            }
+            send { Sonos.setGroupVolume(group.host, v) }
         }
     }
 
@@ -201,8 +196,7 @@ class SonosSpeaker(
 
     private fun readVolume() {
         if (SystemClock.elapsedRealtime() - volumeSetAt < 3000) return // keep the wheel's value
-        val reply = Sonos.soap(group.host, GROUP_VOLUME, "GroupRenderingControl", "GetGroupVolume", ID)
-        Sonos.value(reply, "CurrentVolume")?.toIntOrNull()?.let { vol = it }
+        Sonos.groupVolume(group.host)?.let { vol = it }
     }
 
     private fun seekNow(ms: Int) {
@@ -218,7 +212,6 @@ class SonosSpeaker(
 
     private companion object {
         const val AV = "/MediaRenderer/AVTransport/Control"
-        const val GROUP_VOLUME = "/MediaRenderer/GroupRenderingControl/Control"
         const val ID = "<InstanceID>0</InstanceID>"
         const val POLL_MS = 1000L
     }

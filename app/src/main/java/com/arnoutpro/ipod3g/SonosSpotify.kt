@@ -15,7 +15,10 @@ import java.io.StringReader
  */
 class SonosSpotify(private val prefs: SharedPreferences) {
 
-    /** What the group is playing; uri is a spotify:track: link, or null for anything else. */
+    /**
+     * What the group is playing; uri is a spotify:track: link, or null for anything else. Shuffle,
+     * repeat and volume are only read when asked for (null and -1 otherwise).
+     */
     class State(
         @JvmField val playing: Boolean,
         @JvmField val uri: String?,
@@ -24,7 +27,7 @@ class SonosSpotify(private val prefs: SharedPreferences) {
         @JvmField val album: String,
         @JvmField val position: Int,
         @JvmField val duration: Int,
-        @JvmField val shuffle: Boolean,
+        @JvmField val shuffle: Boolean?,
         @JvmField val repeat: Int,
         @JvmField val volume: Int,
     )
@@ -60,13 +63,13 @@ class SonosSpotify(private val prefs: SharedPreferences) {
     }
 
     @Throws(IOException::class)
-    fun state(g: Sonos.Group): State {
+    fun state(g: Sonos.Group, settings: Boolean): State {
         val transport = Sonos.value(av(g, "GetTransportInfo", ID), "CurrentTransportState")
         val p = av(g, "GetPositionInfo", ID)
         val meta = Sonos.value(p, "TrackMetaData").orEmpty()
         val id = TRACK_ID.find(Sonos.value(p, "TrackURI").orEmpty())?.groupValues?.get(1)
-        val mode = Sonos.value(av(g, "GetTransportSettings", ID), "PlayMode") ?: "NORMAL"
-        val volume = Sonos.value(Sonos.soap(g.host, GROUP_VOLUME, "GroupRenderingControl", "GetGroupVolume", ID), "CurrentVolume")
+        val mode = if (settings) Sonos.value(av(g, "GetTransportSettings", ID), "PlayMode") ?: "NORMAL" else null
+        val volume = if (settings) Sonos.groupVolume(g.host) ?: -1 else -1
         return State(
             transport == "PLAYING" || transport == "TRANSITIONING",
             id?.let { "spotify:track:$it" },
@@ -76,13 +79,14 @@ class SonosSpotify(private val prefs: SharedPreferences) {
             Sonos.value(meta, "album").orEmpty(),
             maxOf(0, Sonos.parseTime(Sonos.value(p, "RelTime"))),
             maxOf(0, Sonos.parseTime(Sonos.value(p, "TrackDuration"))),
-            mode.startsWith("SHUFFLE"),
+            mode?.startsWith("SHUFFLE"),
             when (mode) {
+                null -> -1
                 "REPEAT_ONE", "SHUFFLE_REPEAT_ONE" -> PlayerService.REPEAT_ONE
                 "REPEAT_ALL", "SHUFFLE" -> PlayerService.REPEAT_ALL
                 else -> PlayerService.REPEAT_OFF
             },
-            volume?.toIntOrNull() ?: -1,
+            volume,
         )
     }
 
@@ -113,9 +117,7 @@ class SonosSpotify(private val prefs: SharedPreferences) {
 
     @Throws(IOException::class)
     fun setVolume(g: Sonos.Group, percent: Int) {
-        // A snapshot first keeps the speakers' volumes in proportion within the group.
-        Sonos.soap(g.host, GROUP_VOLUME, "GroupRenderingControl", "SnapshotGroupVolume", ID)
-        Sonos.soap(g.host, GROUP_VOLUME, "GroupRenderingControl", "SetGroupVolume", "$ID<DesiredVolume>$percent</DesiredVolume>")
+        Sonos.setGroupVolume(g.host, percent)
     }
 
     // ---- queue -------------------------------------------------------------------------------
@@ -214,7 +216,6 @@ class SonosSpotify(private val prefs: SharedPreferences) {
 
     private companion object {
         const val AV = "/MediaRenderer/AVTransport/Control"
-        const val GROUP_VOLUME = "/MediaRenderer/GroupRenderingControl/Control"
         const val CONTENT = "/MediaServer/ContentDirectory/Control"
         const val ID = "<InstanceID>0</InstanceID>"
         const val PREF = "sonosSpotifyService"

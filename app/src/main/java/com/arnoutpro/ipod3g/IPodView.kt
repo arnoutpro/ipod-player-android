@@ -10,12 +10,14 @@ import android.graphics.Path
 import android.graphics.RadialGradient
 import android.graphics.Rect
 import android.graphics.RectF
+import android.graphics.RenderNode
 import android.graphics.Shader
 import android.graphics.Typeface
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.view.HapticFeedbackConstants
@@ -66,6 +68,15 @@ class IPodView(private val host: MainActivity) : View(host), SensorEventListener
     private var btnHole = 0f
     private var wheelHole = 0f
     private var centerHole = 0f
+
+    // The buttons and the wheel, recorded once and kept on the GPU while only the LCD changes:
+    // recorded again when a press, the backlight or the light changes. Android 10 and later.
+    private val controls = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) RenderNode("controls") else null
+    private var drawnSize = 0L
+    private var lightVersion = 0
+    private var drawnLight = -1
+    private var drawnPressed = T_NONE
+    private var drawnLit = false
 
     // Light from the room's ceiling, followed with the gravity sensor: the direction on screen
     // towards it, and how far the phone is tilted up from lying flat (0..1).
@@ -177,6 +188,7 @@ class IPodView(private val host: MainActivity) : View(host), SensorEventListener
 
     private fun buildHoles() {
         if (bw == 0f) return
+        lightVersion++
         for (i in 0 until 4) {
             btnWall[i] = wallShader(btnX[i], btnY, btnHole, 0x20)
             btnEdge[i] = edgeShader(btnX[i], btnY, btnHole)
@@ -306,16 +318,40 @@ class IPodView(private val host: MainActivity) : View(host), SensorEventListener
         val delay = lcd.render(lit, now)
         drawBody(c)
         drawScreen(c)
-        for (i in 0 until 4) drawButton(c, i)
-        drawWheel(c)
+        drawControls(c)
         shade(glossShader)
         c.drawRect(body, paint)
         paint.shader = null
 
         if (delay >= 0) {
             handler.removeCallbacks(frame)
-            handler.postDelayed(frame, maxOf(16, delay))
+            // In the dark nothing on the LCD needs to move smoothly.
+            handler.postDelayed(frame, if (lit) maxOf(16, delay) else maxOf(1000, delay))
         }
+    }
+
+    /** The buttons and the wheel, from the GPU's copy when nothing about them changed. */
+    private fun drawControls(c: Canvas) {
+        val node = controls
+        if (node == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || !c.isHardwareAccelerated) {
+            for (i in 0 until 4) drawButton(c, i)
+            drawWheel(c)
+            return
+        }
+        val size = width.toLong() shl 32 or height.toLong()
+        if (drawnLight != lightVersion || drawnPressed != pressed || drawnLit != lit || drawnSize != size) {
+            drawnLight = lightVersion
+            drawnPressed = pressed
+            drawnLit = lit
+            drawnSize = size
+            node.setPosition(0, 0, width, height)
+            node.setUseCompositingLayer(true, null)
+            val rc = node.beginRecording()
+            for (i in 0 until 4) drawButton(rc, i)
+            drawWheel(rc)
+            node.endRecording()
+        }
+        c.drawRenderNode(node)
     }
 
     /**
