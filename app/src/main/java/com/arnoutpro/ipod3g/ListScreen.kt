@@ -116,6 +116,7 @@ open class ListScreen private constructor(
         val right = if (bar) w - 14 else w
 
         val rowH = lcd.rowH
+        val chevronColumn = lcd.modern && items.any { it.arrow }
         for (r in 0 until rows) {
             val i = top + r
             if (i >= items.size) break
@@ -138,13 +139,15 @@ open class ListScreen private constructor(
             }
             val base = Lcd.baseline(text, y.toFloat(), rowH.toFloat())
 
-            val arrowW = if (it.arrow) 22f else 0f
+            // The 6th gen look shows the chevron only on the highlighted row, so every row keeps
+            // its column free and the values line up.
+            val arrowW = if (it.arrow || chevronColumn) 22f else 0f
             var valueW = 0f
             val v = it.value?.get()
             if (!v.isNullOrEmpty()) {
                 valueW = text.measureText(v) + 14
                 // Ends just before the arrow when there is one.
-                val end = if (it.arrow) right - 24 else right - 10
+                val end = if (it.arrow || chevronColumn) right - 24 else right - 10
                 c.drawText(v, end - text.measureText(v), base, text)
             }
             if (it.arrow && lcd.modern) {
