@@ -235,6 +235,8 @@ class PlayerService : Service(), Playback {
 
     override fun album() = current()?.album ?: ""
 
+    override fun artUri() = current()?.uri?.toString()
+
     override fun counter(): String {
         val n = "${pos + 1} of ${queue.size}"
         return if (casting()) "$n on ${speaker()}" else n

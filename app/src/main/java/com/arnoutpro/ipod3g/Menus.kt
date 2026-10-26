@@ -457,6 +457,12 @@ class Menus(private val lcd: Lcd) {
                     host.setClicker(!host.clickerOn())
                     host.redraw()
                 },
+            item("Menu Style")
+                .value { if (host.splitMenus()) "6th Gen" else "3rd Gen" }
+                .onSelect {
+                    host.setSplitMenus(!host.splitMenus())
+                    host.redraw()
+                },
             item("Color")
                 .value { finishLabel(host.finishMode()) }
                 .onSelect {

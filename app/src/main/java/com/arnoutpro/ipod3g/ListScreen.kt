@@ -1,6 +1,7 @@
 package com.arnoutpro.ipod3g
 
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import java.util.function.Supplier
@@ -34,6 +35,7 @@ open class ListScreen private constructor(
     constructor(lcd: Lcd, title: String, source: Supplier<List<Item>>) : this(lcd, title, source.get(), source)
 
     @JvmField protected val items = ArrayList(first)
+
     private var emptyText = ""
     private var sel = 0
     private var top = 0
@@ -42,8 +44,18 @@ open class ListScreen private constructor(
     private var scrolling = false
     private val bgPaint = Paint()
     private val arrow = Path()
+    private val chevron = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        strokeWidth = 2.5f
+        strokeCap = Paint.Cap.ROUND
+    }
 
     fun empty(text: String) = apply { emptyText = text }
+
+    fun selected(): Item? = items.getOrNull(sel)
+
+    /** True when a row shows a value (e.g. Settings), which needs the full width. */
+    fun hasValues() = items.any { it.value != null }
 
     /** Replaces the rows, e.g. once a list loaded in the background arrives. */
     fun setItems(list: List<Item>) {
@@ -57,10 +69,10 @@ open class ListScreen private constructor(
         source?.let { setItems(it.get()) }
     }
 
-    private fun rows(h: Int) = h / Lcd.ROW_H
+    private fun rows(h: Int) = h / lcd.rowH
 
     private fun clampTop() {
-        val rows = rows(Lcd.H - Lcd.TITLE_H)
+        val rows = rows(Lcd.H - lcd.titleH)
         if (sel < top) top = sel
         if (sel >= top + rows) top = sel - rows + 1
         top = top.coerceIn(0, maxOf(0, items.size - rows))
@@ -103,15 +115,28 @@ open class ListScreen private constructor(
         val bar = items.size > rows
         val right = if (bar) w - 14 else w
 
+        val rowH = lcd.rowH
         for (r in 0 until rows) {
             val i = top + r
             if (i >= items.size) break
             val it = items[i]
-            val y = r * Lcd.ROW_H
+            val y = r * rowH
             val hi = i == sel
-            if (hi) c.drawRect(0f, y.toFloat(), right.toFloat(), (y + Lcd.ROW_H).toFloat(), lcd.ink)
-            text.color = if (hi) lcd.bg else Lcd.INK
-            val base = Lcd.baseline(text, y.toFloat(), Lcd.ROW_H.toFloat())
+            val fill = hi
+            if (lcd.modern) {
+                if (hi) {
+                    // The gradient runs over one row, so draw it from the row's top.
+                    c.save()
+                    c.translate(0f, y.toFloat())
+                    c.drawRect(0f, 0f, right.toFloat(), rowH.toFloat(), lcd.select)
+                    c.restore()
+                }
+                text.color = if (fill) Color.WHITE else Lcd.INK
+            } else {
+                if (fill) c.drawRect(0f, y.toFloat(), right.toFloat(), (y + rowH).toFloat(), lcd.ink)
+                text.color = if (fill) lcd.bg else Lcd.INK
+            }
+            val base = Lcd.baseline(text, y.toFloat(), rowH.toFloat())
 
             val arrowW = if (it.arrow) 22f else 0f
             var valueW = 0f
@@ -122,20 +147,28 @@ open class ListScreen private constructor(
                 val end = if (it.arrow) right - 24 else right - 10
                 c.drawText(v, end - text.measureText(v), base, text)
             }
-            if (it.arrow) {
+            if (it.arrow && lcd.modern) {
+                // The classic only shows the chevron on the highlighted row.
+                if (hi) {
+                    val ax = right - 14f
+                    val ay = y + rowH / 2f
+                    c.drawLine(ax, ay - 5, ax + 5, ay, chevron)
+                    c.drawLine(ax + 5, ay, ax, ay + 5, chevron)
+                }
+            } else if (it.arrow) {
                 arrow.reset()
                 val ax = right - 16f
-                val ay = y + Lcd.ROW_H / 2f
+                val ay = y + rowH / 2f
                 arrow.moveTo(ax, ay - 7)
                 arrow.lineTo(ax + 8, ay)
                 arrow.lineTo(ax, ay + 7)
                 arrow.close()
-                c.drawPath(arrow, if (hi) bgPaint.apply { color = lcd.bg } else lcd.ink)
+                c.drawPath(arrow, if (fill) bgPaint.apply { color = lcd.bg } else lcd.ink)
             }
             val maxW = right - 10 - 8 - arrowW - valueW
-            if (hi && text.measureText(it.label) > maxW) {
+            if (fill && text.measureText(it.label) > maxW) {
                 c.save()
-                c.clipRect(0f, y.toFloat(), 8 + maxW, (y + Lcd.ROW_H).toFloat())
+                c.clipRect(0f, y.toFloat(), 8 + maxW, (y + rowH).toFloat())
                 scrolling = lcd.marqueeLeft(c, text, it.label, 8f, maxW, base, now, selSince)
                 c.restore()
             } else {
@@ -144,7 +177,14 @@ open class ListScreen private constructor(
             text.color = Lcd.INK
         }
 
-        if (bar) {
+        if (bar && lcd.modern) {
+            // A slim grey bar with a rounded knob, like the classic's.
+            val x = w - 9f
+            c.drawRect(x, 0f, w.toFloat(), h.toFloat(), lcd.track)
+            val knob = maxOf(14f, h * rows.toFloat() / items.size)
+            val y0 = (h - knob) * top / maxOf(1, items.size - rows)
+            c.drawRoundRect(x + 1.5f, y0 + 1.5f, w - 1.5f, y0 + knob - 1.5f, 3f, 3f, lcd.knob)
+        } else if (bar) {
             val x = w - 12f
             c.drawRect(x, 1f, w - 1f, h - 1f, lcd.stroke)
             val track = h - 6f

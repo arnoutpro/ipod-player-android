@@ -3,8 +3,10 @@ package com.arnoutpro.ipod3g
 import android.graphics.Bitmap
 import android.graphics.BitmapShader
 import android.graphics.Canvas
+import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
 
@@ -13,8 +15,22 @@ import android.graphics.Typeface
  * 160x128) without anti-aliasing, so it keeps the chunky pixel look when scaled up.
  */
 class Lcd(@JvmField val host: MainActivity) {
-    @JvmField val bitmap: Bitmap = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888)
-    private val canvas = Canvas(bitmap)
+    private val lo: Bitmap = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888)
+    private val loCanvas = Canvas(lo)
+
+    // The 6th gen look is drawn at three times the size, so its smooth text stays sharp.
+    private val hi: Bitmap = Bitmap.createBitmap(W * HI, H * HI, Bitmap.Config.ARGB_8888)
+    private val hiCanvas = Canvas(hi).apply { scale(HI.toFloat(), HI.toFloat()) }
+
+    /** True for the iPod classic (6th/7th gen) look: split menus, colour and smooth text. */
+    var modern = false
+        private set
+
+    val bitmap: Bitmap get() = if (modern) hi else lo
+
+    /** The title bar and menu rows: the classic's are slimmer. */
+    val titleH: Int get() = if (modern) MODERN_TITLE_H else TITLE_H
+    val rowH: Int get() = if (modern) MODERN_ROW_H else ROW_H
 
     @JvmField val text = Paint()
     @JvmField val small = Paint()
@@ -22,6 +38,31 @@ class Lcd(@JvmField val host: MainActivity) {
     @JvmField val ink = Paint()
     @JvmField val stroke = Paint()
     @JvmField val dither = Paint()
+    @JvmField val covers = Covers(host)
+
+    // Paints of the 6th gen look.
+    @JvmField val select = Paint()
+    @JvmField val selectDim = Paint()
+    @JvmField val track = Paint()
+    @JvmField val knob = Paint()
+    @JvmField val line = Paint()
+    private val titleText = Paint()
+    private val titleBg = Paint()
+    private val battery = Paint()
+    private val playBlue = Paint()
+    private val shadow = Paint()
+    private val bold = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+
+    // The art beside the 6th gen menus.
+    /** Milliseconds until the art beside the menu needs redrawing, or -1 when it isn't shown. */
+    private var previewDelay = -1L
+    private var previewKey: String? = null
+    private var previewSince = 0L
+    private var previewArt: Bitmap? = null
+    private var previewOld: Bitmap? = null
+    private var previewArtSince = 0L
+    private val previewRect = RectF()
+    private val previewPaint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
 
     private val stack = ArrayList<Screen>()
     private var leaving: Screen? = null
@@ -32,7 +73,6 @@ class Lcd(@JvmField val host: MainActivity) {
     private val playIcon = Path()
 
     init {
-        val bold = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
         for (p in arrayOf(text, small, big)) {
             p.isAntiAlias = false
             p.isSubpixelText = false
@@ -55,6 +95,36 @@ class Lcd(@JvmField val host: MainActivity) {
             for (x in 0 until 4) chk.setPixel(x, y, if ((x / 2 + y / 2) % 2 == 0) INK else 0)
         }
         dither.shader = BitmapShader(chk, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT)
+
+        // The classic's glossy blue highlight; the list you came from keeps a grey one.
+        select.shader = LinearGradient(0f, 0f, 0f, MODERN_ROW_H.toFloat(), 0xFF6DB3F7.toInt(), 0xFF1F6FD8.toInt(), Shader.TileMode.CLAMP)
+        selectDim.shader = LinearGradient(0f, 0f, 0f, MODERN_ROW_H.toFloat(), 0xFFDCDEE1.toInt(), 0xFFAEB2B8.toInt(), Shader.TileMode.CLAMP)
+        titleBg.shader = LinearGradient(0f, 0f, 0f, MODERN_TITLE_H.toFloat(), 0xFFFCFCFC.toInt(), 0xFFC9CDD2.toInt(), Shader.TileMode.CLAMP)
+        battery.shader = LinearGradient(0f, 6f, 0f, 16f, 0xFFB4F08C.toInt(), 0xFF3DAA1E.toInt(), Shader.TileMode.CLAMP)
+        playBlue.shader = LinearGradient(0f, 6f, 0f, 16f, 0xFF8CC8FF.toInt(), 0xFF2A7BE0.toInt(), Shader.TileMode.CLAMP)
+        track.color = 0xFFE6E7E9.toInt()
+        knob.color = 0xFF9DA2A9.toInt()
+        line.color = 0xFF9EA3AA.toInt()
+        for (p in arrayOf(select, selectDim, titleBg, battery, playBlue, track, knob, line)) p.isAntiAlias = true
+        shadow.shader = LinearGradient(0f, 0f, SHADOW_W, 0f, 0x66000000, 0x00000000, Shader.TileMode.CLAMP)
+        titleText.isAntiAlias = true
+        titleText.typeface = bold
+        titleText.textSize = TITLE_FONT
+        titleText.color = INK
+    }
+
+    /** Switches between the 3rd gen and the 6th gen look. */
+    fun theme(m: Boolean) {
+        if (m == modern) return
+        modern = m
+        for (p in arrayOf(text, small, big, ink, stroke)) {
+            p.isAntiAlias = m
+            p.isSubpixelText = m
+        }
+        // The 6th gen look uses one size everywhere.
+        text.textSize = if (m) FONT else 21f
+        small.textSize = if (m) FONT else 17f
+        stroke.strokeWidth = if (m) 1.5f else 2f
     }
 
     // ---- navigation ------------------------------------------------------------------------
@@ -129,13 +199,13 @@ class Lcd(@JvmField val host: MainActivity) {
 
     /** Renders into [bitmap]; returns the delay until the next frame, or -1. */
     fun render(lit: Boolean, now: Long): Long {
-        bg = if (lit) BG_LIT else BG_DARK
-        val c = canvas
+        theme(host.splitMenus())
+        bg = if (modern) (if (lit) MODERN_LIT else MODERN_DARK) else if (lit) BG_LIT else BG_DARK
+        val c = if (modern) hiCanvas else loCanvas
         c.drawColor(bg)
         val s = top() ?: return -1
 
         var delay = s.frameDelay(now)
-        val ch = H - TITLE_H
         var p = 1f
         var out = leaving
         if (out != null) {
@@ -150,23 +220,146 @@ class Lcd(@JvmField val host: MainActivity) {
         drawTitleBar(c, if (out != null && p < 0.5f) out.title() else s.title())
 
         c.save()
-        c.clipRect(0, TITLE_H, W, H)
-        c.translate(0f, TITLE_H.toFloat())
+        c.clipRect(0, titleH, W, H)
+        c.translate(0f, titleH.toFloat())
+        previewDelay = -1
         if (out != null) {
             val e = 1f - (1f - p) * (1f - p)
             val off = e * W * slideDir
             c.save()
             c.translate(-off, 0f)
-            out.draw(c, W, ch, now)
+            drawPage(c, out, if (slideDir > 0) stack.size - 2 else stack.size, now)
             c.restore()
             c.translate(W * slideDir - off, 0f)
         }
-        s.draw(c, W, ch, now)
+        drawPage(c, s, stack.size - 1, now)
         c.restore()
+        if (previewDelay >= 0 && (delay < 0 || delay > previewDelay)) delay = previewDelay
         return delay
     }
 
+    /**
+     * One page. In the 6th gen look the main menu and the menus right below it show the list on
+     * the left half and slowly drifting album art on the right, like the iPod classic.
+     */
+    private fun drawPage(c: Canvas, sc: Screen, depth: Int, now: Long) {
+        val ch = H - titleH
+        if (!modern || sc !is ListScreen || depth > 1 || sc.hasValues()) {
+            sc.draw(c, W, ch, now)
+            return
+        }
+        val half = W / 2
+        c.save()
+        c.clipRect(0, 0, half, ch)
+        sc.draw(c, half, ch, now)
+        c.restore()
+        c.save()
+        c.clipRect(half, 0, W, ch)
+        c.translate(half.toFloat(), 0f)
+        drawPreview(c, W - half, ch, now, sc)
+        // The menu casts a soft shadow over the art.
+        c.drawRect(0f, 0f, SHADOW_W, ch.toFloat(), shadow)
+        c.restore()
+    }
+
+    /**
+     * Album art, changing every few seconds with a fade: random covers from your
+     * own songs and your Spotify Liked Songs, or the playing song's while "Now Playing" is highlighted.
+     */
+    private fun drawPreview(c: Canvas, w: Int, h: Int, now: Long, list: ListScreen) {
+        val ps = host.playback()
+        val playing = list.selected()?.label == "Now Playing" && ps != null && ps.hasTrack()
+        val songs = host.library().songs()
+        val liked = host.spotifyLibrary().get().liked
+        if (playing) {
+            if (previewKey != ps!!.artUri()) {
+                previewKey = ps.artUri()
+                previewSince = now
+            }
+        } else if (songs.size + liked.size > 0 &&
+            (previewKey == null || now - previewSince > PREVIEW_MS || covers.isMissing(previewKey))
+        ) {
+            val i = (Math.random() * (songs.size + liked.size)).toInt()
+            previewKey = if (i < songs.size) songs[i].uri.toString() else liked[i - songs.size].image
+            previewSince = now
+        }
+        val bmp = covers.get(previewKey)
+        if (bmp != null && bmp !== previewArt) {
+            previewOld = previewArt
+            previewArt = bmp
+            previewArtSince = now
+        }
+        val art = previewArt
+        val fade = if (art == null) 1f else minOf(1f, (now - previewArtSince) / FADE_MS.toFloat())
+        // Redraw for the fade, while a cover is still being picked, or when the next one is due.
+        previewDelay = when {
+            fade < 1f -> FADE_FRAME_MS
+            playing -> -1
+            previewKey == null || covers.isMissing(previewKey) -> FADE_FRAME_MS
+            else -> maxOf(FADE_FRAME_MS, PREVIEW_MS - (now - previewSince))
+        }
+        if (art == null) {
+            c.drawRect(0f, 0f, w.toFloat(), h.toFloat(), selectDim)
+            return
+        }
+        previewOld?.let { if (fade < 1f) cover(c, it, w, h, 255) }
+        cover(c, art, w, h, (fade * 255).toInt())
+        if (fade >= 1f) previewOld = null
+    }
+
+    /** Draws a cover filling the pane's height, centred (its sides are cut off). */
+    private fun cover(c: Canvas, b: Bitmap, w: Int, h: Int, alpha: Int) {
+        val size = maxOf(w, h).toFloat()
+        val x = (w - size) / 2f
+        val y = (h - size) / 2f
+        previewRect.set(x, y, x + size, y + size)
+        previewPaint.alpha = alpha
+        c.drawBitmap(b, null, previewRect, previewPaint)
+    }
+
+    /** The classic's slim silver bar: the title on the left, play state and battery on the right. */
+    private fun drawModernTitle(c: Canvas, title: String) {
+        val th = MODERN_TITLE_H.toFloat()
+        c.drawRect(0f, 0f, W.toFloat(), th, titleBg)
+        c.drawRect(0f, th - 1, W.toFloat(), th, line)
+
+        val bx = W - 30f
+        val by = 6f
+        c.drawRoundRect(bx, by, bx + 22, by + 10, 2f, 2f, battery)
+        c.drawRoundRect(bx, by, bx + 22, by + 10, 2f, 2f, stroke)
+        c.drawRect(bx + 22, by + 3, bx + 24, by + 7, stroke)
+        val level = host.batteryLevel().coerceIn(0, 100)
+        if (level < 100) {
+            // The empty part of the battery.
+            val fx = bx + 1 + 20 * level / 100f
+            track.color = 0xFFF2F2F2.toInt()
+            c.drawRect(fx, by + 1, bx + 21, by + 9, track)
+            track.color = 0xFFE6E7E9.toInt()
+        }
+
+        val ps = host.playback()
+        if (ps != null && ps.hasTrack()) {
+            val x = bx - 18
+            if (ps.isPlayingOrLoading()) {
+                playIcon.reset()
+                playIcon.moveTo(x, by)
+                playIcon.lineTo(x + 10, by + 5)
+                playIcon.lineTo(x, by + 10)
+                playIcon.close()
+                c.drawPath(playIcon, playBlue)
+            } else {
+                c.drawRect(x, by, x + 3.5f, by + 10, playBlue)
+                c.drawRect(x + 6, by, x + 9.5f, by + 10, playBlue)
+            }
+        }
+        c.drawText(fit(titleText, title, W - 70f), 8f, baseline(titleText, 0f, th), titleText)
+    }
+
     private fun drawTitleBar(c: Canvas, title: String) {
+        if (modern) {
+            drawModernTitle(c, title)
+            return
+        }
         val ps = host.playback()
         // Play state indicator on the left.
         if (ps != null && ps.hasTrack()) {
@@ -245,6 +438,17 @@ class Lcd(@JvmField val host: MainActivity) {
         const val TITLE_H = 36
         const val ROW_H = 36
         private const val SLIDE_MS = 170L
+        private const val HI = 3
+        private const val MODERN_LIT = 0xFFFFFFFF.toInt()
+        private const val MODERN_DARK = 0xFFB9BCC0.toInt()
+        private const val FONT = 16f // bold, like the classic's Helvetica
+        private const val TITLE_FONT = 14f
+        private const val MODERN_TITLE_H = 22
+        private const val MODERN_ROW_H = 27
+        private const val PREVIEW_MS = 6000L
+        private const val FADE_MS = 600L
+        private const val FADE_FRAME_MS = 40L
+        private const val SHADOW_W = 10f
 
         const val BG_LIT = 0xFFCAD7D9.toInt()
         const val BG_DARK = 0xFF9FA69C.toInt()

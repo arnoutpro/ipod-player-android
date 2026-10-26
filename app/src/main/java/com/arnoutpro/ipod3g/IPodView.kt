@@ -342,6 +342,7 @@ class IPodView(private val host: MainActivity) : View(host), SensorEventListener
         paint.color = finish.bezel
         c.drawRoundRect(bezel, r, r, paint)
 
+        lcdPaint.isFilterBitmap = lcd.modern // the 6th gen look is drawn smooth and larger
         c.drawBitmap(lcd.bitmap, null, lcdRect, lcdPaint)
 
         // Inner shadow along the top of the LCD, then the glass reflection.

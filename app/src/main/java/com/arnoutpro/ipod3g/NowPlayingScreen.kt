@@ -1,9 +1,14 @@
 package com.arnoutpro.ipod3g
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Shader
 import android.media.AudioManager
 import java.util.Locale
 
@@ -19,6 +24,30 @@ class NowPlayingScreen(lcd: Lcd) : Screen(lcd, "Now Playing") {
     // Reused while drawing, so a frame creates no garbage.
     private val path = Path()
     private val bgPaint = Paint()
+
+    // The 6th gen look: cover art on the left, a blue progress bar.
+    private val matrix = Matrix()
+    private val src = FloatArray(8)
+    private val dst = FloatArray(8)
+    private val reflFade = Paint()
+    private var reflBg = 0
+    private var placeholder: Bitmap? = null
+    private val artPaint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
+    private val frame = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 1f
+        color = 0xFFB4B8BE.toInt()
+    }
+    private val noArt = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val note = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textSize = 72f
+        textAlign = Paint.Align.CENTER
+    }
+    private val barFill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        shader = LinearGradient(0f, 0f, 0f, BAR_H, 0xFF7BBBF8.toInt(), 0xFF1F6FD8.toInt(), Shader.TileMode.CLAMP)
+    }
+    private val knob = Paint(Paint.ANTI_ALIAS_FLAG)
 
     override fun shown() {
         mode = NORMAL
@@ -95,6 +124,11 @@ class NowPlayingScreen(lcd: Lcd) : Screen(lcd, "Now Playing") {
             trackSince = now
         }
 
+        if (lcd.modern) {
+            drawModern(c, ps, w, h, now)
+            return
+        }
+
         c.drawText(Lcd.fit(small, ps.counter(), w - 90f), 8f, 22f, small)
         drawModeIcons(c, ps, w)
 
@@ -132,6 +166,136 @@ class NowPlayingScreen(lcd: Lcd) : Screen(lcd, "Now Playing") {
         c.drawText(time(at), bx, tb, text)
         val rem = "-" + time(maxOf(0, dur - at))
         c.drawText(rem, bx + bw - text.measureText(rem), tb, text)
+    }
+
+    /**
+     * The iPod classic's Now Playing: the cover turned slightly away with a faint reflection
+     * below it, the song beside it, and the times either side of the bar at the bottom.
+     */
+    private fun drawModern(c: Canvas, ps: Playback, w: Int, h: Int, now: Long) {
+        val text = lcd.text
+        drawModeIcons(c, ps, w)
+
+        val cover = lcd.covers.get(ps.artUri()) ?: noCover()
+        val size = 118f
+        val x0 = 16f
+        val y0 = 22f
+        // The right edge is further away: narrower and shorter.
+        val x1 = x0 + size * 0.86f
+        quad(x0, y0, x1, y0 + size * TILT, x1, y0 + size * (1 - TILT), x0, y0 + size)
+        c.save()
+        c.concat(map(cover, false))
+        c.drawBitmap(cover, 0f, 0f, artPaint)
+        c.restore()
+
+        // The reflection: the cover mirrored below its bottom edge, fading out.
+        val reflH = size * 0.32f
+        val bottom = y0 + size
+        quad(x0, bottom, x1, bottom - size * TILT, x1, bottom + size * (1 - 3 * TILT), x0, bottom + size)
+        c.save()
+        c.clipRect(x0, bottom - size * TILT, x1, bottom + reflH)
+        c.concat(map(cover, true))
+        c.drawBitmap(cover, 0f, 0f, artPaint)
+        c.restore()
+        if (reflBg != lcd.bg) {
+            reflBg = lcd.bg
+            reflFade.shader = LinearGradient(
+                0f, bottom, 0f, bottom + reflH,
+                (lcd.bg and 0xFFFFFF) or 0xA0000000.toInt(), lcd.bg, Shader.TileMode.CLAMP,
+            )
+        }
+        c.drawRect(x0, bottom - size * TILT, x1 + 1, bottom + reflH + 1, reflFade)
+
+        val tx = 160f
+        val tw = w - tx - 8
+        val m1 = line(c, text, ps.title(), tx, tw, y0 + 26, now)
+        val m2 = line(c, text, ps.artist(), tx, tw, y0 + 26 + LINE, now)
+        val m3 = line(c, text, ps.album(), tx, tw, y0 + 26 + 2 * LINE, now)
+        c.drawText(Lcd.fit(text, ps.counter(), tw), tx, y0 + 26 + 3.4f * LINE, text)
+        scrolling = m1 || m2 || m3
+
+        val by = h - 44f
+        val tb = Lcd.baseline(text, by - 6, BAR_H + 12)
+        if (mode == VOLUME) {
+            speaker(c, 12f, by + BAR_H / 2f, false)
+            speaker(c, w - 30f, by + BAR_H / 2f, true)
+            modernBar(c, 44f, by, w - 88f, volumeFraction(ps), false)
+            return
+        }
+        val dur = maxOf(1, ps.getDuration())
+        val at = if (mode == SCRUB && scrubPos >= 0) scrubPos else ps.getPosition()
+        val elapsed = time(at)
+        val rem = "-" + time(maxOf(0, dur - at))
+        c.drawText(elapsed, 10f, tb, text)
+        c.drawText(rem, w - 10 - text.measureText(rem), tb, text)
+        modernBar(c, 62f, by, w - 124f, at / dur.toFloat(), mode == SCRUB)
+    }
+
+    private fun quad(ax: Float, ay: Float, bx: Float, by: Float, cx: Float, cy: Float, dx: Float, dy: Float) {
+        dst[0] = ax; dst[1] = ay; dst[2] = bx; dst[3] = by
+        dst[4] = cx; dst[5] = cy; dst[6] = dx; dst[7] = dy
+    }
+
+    /** Maps the bitmap's corners onto [dst] (upside down for the reflection). */
+    private fun map(b: Bitmap, flip: Boolean): Matrix {
+        val bw = b.width.toFloat()
+        val bh = b.height.toFloat()
+        if (flip) {
+            src[0] = 0f; src[1] = bh; src[2] = bw; src[3] = bh; src[4] = bw; src[5] = 0f; src[6] = 0f; src[7] = 0f
+        } else {
+            src[0] = 0f; src[1] = 0f; src[2] = bw; src[3] = 0f; src[4] = bw; src[5] = bh; src[6] = 0f; src[7] = bh
+        }
+        matrix.setPolyToPoly(src, 0, dst, 0, 4)
+        return matrix
+    }
+
+    /** A grey square with a note, like the iPod's own, for songs without a cover. */
+    private fun noCover(): Bitmap {
+        placeholder?.let { return it }
+        val b = Bitmap.createBitmap(300, 300, Bitmap.Config.ARGB_8888)
+        val pc = Canvas(b)
+        noArt.shader = LinearGradient(0f, 0f, 0f, 300f, 0xFFC9CDD2.toInt(), 0xFF8E949B.toInt(), Shader.TileMode.CLAMP)
+        pc.drawRect(0f, 0f, 300f, 300f, noArt)
+        note.textSize = 180f
+        pc.drawText("\u266A", 150f, Lcd.baseline(note, 0f, 300f), note)
+        placeholder = b
+        return b
+    }
+
+    /** A left-aligned line that scrolls when it doesn't fit; returns true while scrolling. */
+    private fun line(c: Canvas, p: Paint, s: String, x: Float, w: Float, base: Float, now: Long): Boolean {
+        if (p.measureText(s) <= w) {
+            c.drawText(s, x, base, p)
+            return false
+        }
+        c.save()
+        c.clipRect(x, base - p.textSize * 1.3f, x + w, base + p.textSize * 0.5f)
+        val moving = lcd.marqueeLeft(c, p, s, x, w, base, now, trackSince)
+        c.restore()
+        return moving
+    }
+
+    private fun modernBar(c: Canvas, x: Float, y: Float, w: Float, frac: Float, scrub: Boolean) {
+        val r = BAR_H / 2f
+        c.drawRoundRect(x, y, x + w, y + BAR_H, r, r, lcd.track)
+        val fx = x + w * frac.coerceIn(0f, 1f)
+        c.save()
+        c.translate(0f, y) // the gradient runs from the bar's top
+        if (fx > x) c.drawRoundRect(x, 0f, maxOf(fx, x + BAR_H), BAR_H, r, r, barFill)
+        c.restore()
+        c.drawRoundRect(x, y, x + w, y + BAR_H, r, r, frame)
+        if (scrub) {
+            knob.color = Color.WHITE
+            c.drawCircle(fx, y + r, r + 3, knob)
+            c.drawCircle(fx, y + r, r + 3, frame)
+        }
+    }
+
+    private fun volumeFraction(ps: Playback): Float = if (ps.speaker() != null) {
+        ps.speakerVolume() / 100f
+    } else {
+        val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        audio.getStreamVolume(AudioManager.STREAM_MUSIC) / maxOf(1, max).toFloat()
     }
 
     private fun bar(c: Canvas, x: Float, y: Float, w: Float, h: Float, frac: Float, diamond: Boolean) {
@@ -210,6 +374,9 @@ class NowPlayingScreen(lcd: Lcd) : Screen(lcd, "Now Playing") {
         private const val SCRUB = 2
         private const val VOLUME_SHOW_MS = 1800L
         private const val SCRUB_IDLE_MS = 4000L
+        private const val BAR_H = 12f
+        private const val TILT = 0.05f
+        private const val LINE = 22f
 
         /** Playing on another speaker: set its own volume, not the phone's. */
         fun speakerVolume(ps: Playback, d: Int): Boolean {

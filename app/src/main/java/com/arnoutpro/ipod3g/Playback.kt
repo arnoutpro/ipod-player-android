@@ -16,6 +16,9 @@ interface Playback {
 
     fun album(): String
 
+    /** Where the cover comes from: a content:// song or an https:// image, or null. */
+    fun artUri(): String? = null
+
     /** The small line at the top left of Now Playing, e.g. "3 of 12". */
     fun counter(): String
 

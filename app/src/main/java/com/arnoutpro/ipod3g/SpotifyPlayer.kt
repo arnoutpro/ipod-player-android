@@ -85,6 +85,7 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
     private var title = ""
     private var artist = ""
     private var album = ""
+    private var art: String? = null
     private var position = 0
     private var duration = 0
     private var positionAt = 0L
@@ -548,6 +549,7 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
         album = item.optJSONObject("album")?.optString("name")
             ?: item.optJSONObject("show")?.optString("name")
             ?: ""
+        art = Covers.pick(item.optJSONObject("album")?.optJSONArray("images") ?: item.optJSONArray("images"))
         duration = item.optInt("duration_ms")
         position = state.optInt("progress_ms")
         positionAt = SystemClock.elapsedRealtime()
@@ -588,6 +590,8 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
     override fun artist() = if (status != null) "" else artist
 
     override fun album() = if (status != null) "" else album
+
+    override fun artUri() = if (status != null) null else art
 
     /** Spotify's name stands in for "3 of 12": the credit its terms ask for. */
     override fun counter() = speakerName?.let { "Spotify on $it" } ?: "Spotify"

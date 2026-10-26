@@ -431,6 +431,13 @@ class MainActivity : Activity(), PlayerService.Listener {
         prefs.edit().putBoolean("clicker", on).apply()
     }
 
+    /** The iPod classic (6th gen) look: colour, smooth text and album art beside the top menus. */
+    fun splitMenus() = prefs.getBoolean("split", false)
+
+    fun setSplitMenus(on: Boolean) {
+        prefs.edit().putBoolean("split", on).apply()
+    }
+
     /** 0 = off, -1 = always on, otherwise seconds. */
     fun backlightSeconds() = prefs.getInt("backlight", 10)
 

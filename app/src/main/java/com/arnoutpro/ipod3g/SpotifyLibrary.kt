@@ -26,6 +26,8 @@ class SpotifyLibrary(private val spotify: Spotify, dir: File, private val onChan
         @JvmField val albumArtist: String,
         @JvmField val disc: Int,
         @JvmField val track: Int,
+        /** The album cover's https link, or null. */
+        @JvmField val image: String?,
     )
 
     class Album internal constructor(
@@ -184,7 +186,8 @@ class SpotifyLibrary(private val spotify: Spotify, dir: File, private val onChan
             savedRaw = saved
             followedRaw = followed
         }
-        loadedAt = o.optLong("at")
+        // Saved before covers were kept: fetch again on the next refresh to get them.
+        loadedAt = if (liked.isNotEmpty() && liked.all { it.image == null }) 0 else o.optLong("at")
         build(liked, saved, followed)
     } catch (e: IOException) {
         file.delete()
@@ -213,6 +216,7 @@ class SpotifyLibrary(private val spotify: Spotify, dir: File, private val onChan
                 a?.optString("name") ?: "", a?.optString("uri") ?: "",
                 a?.let { firstArtist(it).first } ?: artist,
                 t.optInt("disc_number", 1), t.optInt("track_number"),
+                Covers.pick(a?.optJSONArray("images")),
             )
         }
 
@@ -281,7 +285,7 @@ class SpotifyLibrary(private val spotify: Spotify, dir: File, private val onChan
             for (s in list) {
                 a.put(
                     JSONArray().put(s.uri).put(s.name).put(s.artist).put(s.artistId ?: "")
-                        .put(s.album).put(s.albumUri).put(s.albumArtist).put(s.disc).put(s.track)
+                        .put(s.album).put(s.albumUri).put(s.albumArtist).put(s.disc).put(s.track).put(s.image ?: "")
                 )
             }
             return a
@@ -293,6 +297,7 @@ class SpotifyLibrary(private val spotify: Spotify, dir: File, private val onChan
             Song(
                 s.getString(0), s.getString(1), s.getString(2), id.ifEmpty { null },
                 s.getString(4), s.getString(5), s.getString(6), s.getInt(7), s.getInt(8),
+                s.optString(9).ifEmpty { null },
             )
         }
     }

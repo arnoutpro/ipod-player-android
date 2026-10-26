@@ -51,6 +51,7 @@ Connect speaker. There's a 7-band equalizer, and a black finish for the evening.
 - [Spotify](#spotify)
 - [Speakers](#speakers)
 - [Settings](#settings)
+- [Menu Style](#menu-style)
 - [Extras](#extras)
 - [Background playback](#background-playback)
 - [Building it yourself](#building-it-yourself)
@@ -98,7 +99,8 @@ the reflection on the screen glass all turn as you tilt the phone. Lay it flat o
 light comes from straight above, which makes the face look almost even.
 
 There are two finishes: the original white, and a black one that Apple never made. See
-[Color](#settings).
+[Color](#settings). The screen can also look like the colour screen of the later iPod classic, see
+[Menu Style](#menu-style).
 
 ---
 
@@ -129,7 +131,7 @@ The menus are the original iPod's, with a Spotify menu added.
 | **Browse** | Artists, Albums, Genres, Songs, Composers |
 | **Spotify** | Playlists, Artists, Albums, Songs, Recently Liked, Disconnect. See [Spotify](#spotify). |
 | **Extras** | Clock, Games › Brick |
-| **Settings** | About, Shuffle, Repeat, EQ, Speakers, Backlight Timer, Clicker, Color, Rescan Music |
+| **Settings** | About, Shuffle, Repeat, EQ, Speakers, Backlight Timer, Clicker, Menu Style, Color, Rescan Music |
 | **Shuffle Songs** | Plays your whole library in random order |
 | **Backlight** | Turns the backlight on or off |
 | **Now Playing** | Appears once something is playing |
@@ -320,6 +322,7 @@ won't send music to a Sonos from here, because Spotify doesn't list Sonos speake
 | **Speakers** | Where the music plays, see [Speakers](#speakers) |
 | **Backlight Timer** | Off, 2, 5, 10, 15, 20 or 30 seconds, or Always On |
 | **Clicker** | The click sound and vibration on/off |
+| **Menu Style** | 3rd Gen (the original) or 6th Gen (the iPod classic's colour screen), see [Menu Style](#menu-style) |
 | **Color** | White, Black or Auto (follows the phone's dark mode) |
 | **Rescan Music** | Reads the phone's music library again |
 
@@ -332,6 +335,34 @@ plastic under the acrylic, a graphite wheel and buttons, the same red glow. Auto
 dark mode and switches the moment it changes, without losing your place in the menus.
 
 <br clear="right">
+
+---
+
+## Menu Style
+
+Settings › **Menu Style** switches the screen between two iPods. The body, the buttons and the
+wheel stay the same; only what's on the LCD changes.
+
+- **3rd Gen** (the default): the original greyish-blue LCD with chunky bold pixel text, as
+  described above.
+- **6th Gen**: the colour screen of the iPod classic (6th and 7th generation).
+  - A white screen with smooth bold text, drawn at three times the resolution so it stays sharp.
+    It dims to light grey when the backlight goes off.
+  - A slim silver title bar with the title on the left, a blue ▶ or ❙❙ and a green battery on the
+    right.
+  - Slimmer rows with the glossy blue highlight and white text. The › arrow only shows on the
+    highlighted row.
+  - The main menu and the menus right below it (Music, Spotify, Extras) show the list on the left
+    half and album art on the right, with a soft shadow from the menu over it. The art is a random
+    cover from your own songs and your Spotify Liked Songs, changing with a fade every few seconds.
+    While **Now Playing** is highlighted it shows the playing song's cover. Deeper lists and
+    Settings use the full width.
+  - Now Playing shows the cover turned slightly away with a faint reflection below it, the title,
+    artist, album and "3 of 12" beside it, and the elapsed and remaining time either side of a blue
+    progress bar. Songs without a cover get a grey square with a ♪.
+
+Covers of your own songs come from the files themselves, so they work offline. Spotify covers are
+downloaded when they're shown, and the last few are kept in memory.
 
 ---
 
@@ -410,7 +441,8 @@ layout files and no image assets: everything on screen is drawn on a `Canvas`.
 | [`MainActivity`](app/src/main/java/com/arnoutpro/ipod3g/MainActivity.kt) | Full-screen activity: permissions, settings, the finish, Spotify sign-in and which player is active |
 | [`IPodView`](app/src/main/java/com/arnoutpro/ipod3g/IPodView.kt) | Draws the face, acrylic and lighting; turns touches into wheel and button input; backlight and tilt sensor |
 | [`Finish`](app/src/main/java/com/arnoutpro/ipod3g/Finish.kt) | The white and black colour palettes |
-| [`Lcd`](app/src/main/java/com/arnoutpro/ipod3g/Lcd.kt) | The 320 × 292 LCD bitmap: title bar, screen stack and slide animation, fonts, marquee text |
+| [`Lcd`](app/src/main/java/com/arnoutpro/ipod3g/Lcd.kt) | The 320 × 292 LCD bitmap: title bar, screen stack and slide animation, fonts, marquee text; the 3rd Gen and 6th Gen looks and the 6th Gen album art beside the menus |
+| [`Covers`](app/src/main/java/com/arnoutpro/ipod3g/Covers.kt) | Cover art from your song files or Spotify, loaded in the background and cached |
 | [`Screen`](app/src/main/java/com/arnoutpro/ipod3g/Screen.kt), [`ListScreen`](app/src/main/java/com/arnoutpro/ipod3g/ListScreen.kt) | A page on the LCD; the classic menu list with highlight, arrows and scroll bar |
 | [`Menus`](app/src/main/java/com/arnoutpro/ipod3g/Menus.kt) | The whole menu tree, including the Spotify menus |
 | [`NowPlayingScreen`](app/src/main/java/com/arnoutpro/ipod3g/NowPlayingScreen.kt), [`EqScreen`](app/src/main/java/com/arnoutpro/ipod3g/EqScreen.kt), [`ClockScreen`](app/src/main/java/com/arnoutpro/ipod3g/ClockScreen.kt), [`BrickScreen`](app/src/main/java/com/arnoutpro/ipod3g/BrickScreen.kt) | The other screens |
