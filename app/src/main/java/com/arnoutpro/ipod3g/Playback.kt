@@ -19,6 +19,9 @@ interface Playback {
     /** Where the cover comes from: a content:// song or an https:// image, or null. */
     fun artUri(): String? = null
 
+    /** What's playing comes from, when that's worth saying (e.g. a radio's name), or null. */
+    fun source(): String? = null
+
     /** The small line at the top left of Now Playing, e.g. "3 of 12". */
     fun counter(): String
 

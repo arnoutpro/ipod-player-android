@@ -239,7 +239,7 @@ class Menus(private val lcd: Lcd) {
     /** An artist: their radio, songs, albums, and more of their albums straight from Spotify. */
     private fun spotifyArtist(a: SpotifyLibrary.Artist): Screen {
         val items = ArrayList<ListScreen.Item>()
-        a.id?.let { id -> items.add(item("Start Radio").onSelect { radio("spotify:artist:$id") }) }
+        a.id?.let { id -> items.add(item("Start Radio").onSelect { radio("spotify:artist:$id", a.name) }) }
         if (a.songs.isNotEmpty()) items.add(sub("All Songs") { ListScreen(lcd, a.name, songRows(a.songs)) })
         for (al in a.albums) items.add(sub(al.name) { spotifyAlbum(al) })
         a.id?.let { id ->
@@ -266,12 +266,12 @@ class Menus(private val lcd: Lcd) {
 
     /** A Spotify song row: select plays it, holding the centre button starts its radio. */
     private fun spotifySong(name: String, uri: String, play: SpotifyPlayer.Request) =
-        item(name).onSelect { host.playSpotify(play) }.onHold { radio(uri) }
+        item(name).onSelect { host.playSpotify(play) }.onHold { radio(uri, name) }
 
-    /** Plays Spotify's radio for an artist or song link. */
-    private fun radio(uri: String) {
+    /** Plays Spotify's radio for an artist or song link; name is what Now Playing calls it after. */
+    private fun radio(uri: String, name: String) {
         host.buzz()
-        host.playSpotify(SpotifyPlayer.Request.radio(uri))
+        host.playSpotify(SpotifyPlayer.Request.radio(uri, name))
     }
 
     /** A list that fills in as Spotify answers; errors show where the rows would be. */

@@ -135,6 +135,11 @@ class NowPlayingScreen(lcd: Lcd) : Screen(lcd, "Now Playing") {
         val m2 = lcd.marquee(c, text, ps.artist(), 8f, w - 16f, base1 + lh, now, trackSince)
         val m3 = lcd.marquee(c, text, ps.album(), 8f, w - 16f, base1 + 2 * lh, now, trackSince)
         scrolling = m1 || m2 || m3
+        // e.g. "Artist Radio: 10cc", centred just above the bar.
+        ps.source()?.let {
+            val s = Lcd.fit(small, it, w - 16f)
+            c.drawText(s, (w - small.measureText(s)) / 2f, 150 + extra - 12, small)
+        }
 
         val dur = maxOf(1, ps.getDuration())
         val at = if (mode == SCRUB && scrubPos >= 0) scrubPos else ps.getPosition()
@@ -201,6 +206,7 @@ class NowPlayingScreen(lcd: Lcd) : Screen(lcd, "Now Playing") {
         val m2 = line(c, text, ps.artist(), tx, tw, y0 + 26 + LINE, now)
         val m3 = line(c, text, ps.album(), tx, tw, y0 + 26 + 2 * LINE, now)
         c.drawText(Lcd.fit(text, ps.counter(), tw), tx, y0 + 26 + 3.4f * LINE, text)
+        ps.source()?.let { c.drawText(Lcd.fit(text, it, tw), tx, y0 + 26 + 4.4f * LINE, text) }
         scrolling = m1 || m2 || m3
 
         val by = h - 44f

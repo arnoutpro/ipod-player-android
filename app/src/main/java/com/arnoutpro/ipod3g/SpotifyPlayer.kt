@@ -51,6 +51,8 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
         internal val radio: Boolean = false,
         /** Where in the song to start, e.g. when moving to another speaker. */
         internal val positionMs: Int = 0,
+        /** For a radio picked from the menus: what Now Playing calls it, e.g. "Artist Radio: 10cc". */
+        internal val label: String? = null,
     ) {
         companion object {
             /** trackUri sits at index in the playlist or album; null plays it from the top. */
@@ -60,9 +62,14 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
             /** Plays songs from start onwards, e.g. an artist's songs or Songs A-Z. */
             fun songs(uris: List<String>, start: Int) = Request(null, uris[start], start, uris, false, true)
 
-            /** Spotify's radio of songs like this artist or song (a spotify:artist: or spotify:track: link). */
-            fun radio(uri: String) =
-                Request(null, "spotify:station:" + uri.removePrefix("spotify:"), -1, null, false, true, true)
+            /**
+             * Spotify's radio of songs like this artist or song (a spotify:artist: or spotify:track:
+             * link), named after it on Now Playing; a radio that carries one on keeps the name.
+             */
+            fun radio(uri: String, name: String? = null): Request {
+                val label = name?.let { (if (uri.startsWith("spotify:artist:")) "Artist Radio: " else "Song Radio: ") + it }
+                return Request(null, "spotify:station:" + uri.removePrefix("spotify:"), -1, null, false, true, true, 0, label)
+            }
 
             internal fun transfer(keepPlaying: Boolean) = Request(null, null, -1, null, true, keepPlaying)
 
@@ -140,6 +147,8 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
     private var radioList = false
     /** What plays was started as a radio (on the phone or a Connect speaker). */
     private var radioPlaying = false
+    /** The name of the radio that's on, kept while new radios carry it on. */
+    private var radioLabel: String? = null
     /** The radio's songs in the Sonos queue; when its last one ends, a new radio follows. */
     private var sonosRadio: List<String>? = null
     /** When an error was shown: the Sonos's state doesn't replace it straight away. */
@@ -172,6 +181,7 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
         has = true
         if (!rq.transfer) {
             radioPlaying = rq.radio
+            if (rq.label != null) radioLabel = rq.label
             context = rq.contextUri
             sonosRadio = null
             radioList = false // a radio's own list says so again right after
@@ -1006,6 +1016,10 @@ class SpotifyPlayer(private val spotify: Spotify, private val host: MainActivity
     override fun album() = if (status != null) "" else album
 
     override fun artUri() = if (status != null) null else art
+
+    /** While a radio plays: its name, e.g. "Artist Radio: 10cc". */
+    override fun source(): String? =
+        if (status == null && (radioPlaying || radioList || sonosRadio != null)) radioLabel else null
 
     /** Spotify's name stands in for "3 of 12": the credit its terms ask for. */
     override fun counter() = speakerName?.let { "Spotify on $it" } ?: "Spotify"
