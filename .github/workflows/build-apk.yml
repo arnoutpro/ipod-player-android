@@ -21,10 +21,10 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      # The build number is GitHub's run number plus 9: early test builds on the phone ran 9
-      # ahead, and Android won't install a lower version over a higher one.
+      # The build number is GitHub's run number plus 19: test builds on the phone once ran ahead,
+      # and the radio release jumped to 1.0.60. Android won't install a lower version over a higher one.
       - name: Set build number
-        run: echo "BUILD_NUMBER=$(( ${{ github.run_number }} + 9 ))" >> "$GITHUB_ENV"
+        run: echo "BUILD_NUMBER=$(( ${{ github.run_number }} + 19 ))" >> "$GITHUB_ENV"
 
       - name: Build signed release APK
         run: ./gradlew --no-daemon assembleRelease

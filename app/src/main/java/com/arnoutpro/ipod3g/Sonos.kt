@@ -186,7 +186,8 @@ object Sonos {
             val headers = reply.substring(0, split).lowercase(Locale.ROOT)
             var content = reply.substring(split + 4)
             if (headers.contains("transfer-encoding: chunked")) content = unchunk(content)
-            if (!status.contains(" 200 ")) throw IOException("Sonos error: $status")
+            // A refusal carries a UPnP error code, e.g. 711 for an illegal seek target.
+            if (!status.contains(" 200 ")) throw IOException("Sonos error: $status" + (value(content, "errorCode")?.let { " ($it)" } ?: ""))
             return content
         }
     }

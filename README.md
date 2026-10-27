@@ -226,9 +226,11 @@ can play for a second or two between songs.
 
 Spotify's own radio, an endless mix of songs like the one you start from. Pick **Start Radio** on
 an artist, or hold the centre button on any Spotify song. Spotify chooses the songs as they play,
-so there's no list to scroll; Next skips ahead. The radio plays through the Spotify app itself
+so there's no list to scroll; Next skips ahead. The radio starts in the Spotify app itself
 (Spotify's Web API no longer offers radio to new apps), and follows the speaker you chose like
-everything else.
+everything else. A speaker can't take a radio link, so for a speaker the iPod takes the radio's
+next 10 songs along; after the tenth (or Next on it) a new radio starts from that song, so it keeps
+going. For a Sonos the radio starts silently on the phone just long enough to read those songs.
 
 The music comes out of this phone unless you choose a speaker under [Speakers](#speakers). That's
 on purpose: Spotify likes to play on whatever device was active last, and during testing that
@@ -294,7 +296,7 @@ New Spotify songs keep going to that Sonos until you pick another speaker. An al
 into the Sonos queue whole; Liked Songs and other song lists go in from the song you picked, up to
 100 songs. The speakers stream the music from Spotify themselves.
 Now Playing reads "Spotify on Kitchen", with the cover, and Next, Previous, scrubbing and the
-volume all work. Spotify's radio doesn't play on a Sonos this way. Chromecasts don't take Spotify:
+volume all work, and so does Spotify's radio (see Radio above). Chromecasts don't take Spotify:
 while Spotify is playing they say "No Spotify".
 
 **Spotify Connect devices** are for Spotify. Every speaker, TV, computer or web player that
@@ -416,13 +418,13 @@ The APK lands in `app/build/outputs/apk/release/`. If Gradle can't find the SDK,
 build, local or from GitHub, installs over the previous one. It's fine for a personal sideloaded
 app; never use it for the Play Store.
 
-**Version numbers:** the version (`1.0.N`) is GitHub's run number plus 9, set by the workflow as
-`BUILD_NUMBER`; the 9 makes up for test builds that once ran ahead of GitHub's count. A local build
+**Version numbers:** the version (`1.0.N`) is GitHub's run number plus 19, set by the workflow as
+`BUILD_NUMBER`; the offset comes from test builds that once ran ahead, and a jump to 1.0.60. A local build
 is version 1 unless you set `BUILD_NUMBER`. Android refuses to install a lower version over a higher
 one, so to test a local build over a release, build with the number the next release will get:
 
 ```bash
-BUILD_NUMBER=47 ./gradlew assembleRelease
+BUILD_NUMBER=61 ./gradlew assembleRelease
 ```
 
 **Libraries:**
