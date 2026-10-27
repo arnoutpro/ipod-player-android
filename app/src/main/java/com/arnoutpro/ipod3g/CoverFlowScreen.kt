@@ -16,6 +16,8 @@ class CoverFlowScreen(lcd: Lcd, private val source: () -> List<Album>) : Screen(
     /** One album: its name, artist, where its cover comes from, and the list it opens. */
     class Album(val name: String, val artist: String, val art: String?, val open: () -> Screen)
 
+    override val dark get() = true
+
     private var albums: List<Album> = emptyList()
     private var sel = 0
     /** Where the row is: slides towards [sel] instead of jumping. */

@@ -3,6 +3,7 @@ package com.arnoutpro.ipod3g
 import android.graphics.Bitmap
 import android.graphics.BitmapShader
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Path
@@ -52,6 +53,12 @@ class Lcd(val host: MainActivity) {
     private val battery = Paint()
     private val playBlue = Paint()
     private val shadow = Paint()
+    private val darkBg = Paint().apply { color = 0xFF000000.toInt() }
+    private val darkOutline = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 1.5f
+        color = 0xFFD0D2D5.toInt()
+    }
     private val bold = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
 
     // The art beside the 6th gen menus.
@@ -222,7 +229,7 @@ class Lcd(val host: MainActivity) {
                 delay = 16
             }
         }
-        drawTitleBar(c, if (out != null && p < 0.5f) out.title() else s.title())
+        drawTitleBar(c, if (out != null && p < 0.5f) out else s)
 
         c.save()
         c.clipRect(0, titleH, W, H)
@@ -323,21 +330,27 @@ class Lcd(val host: MainActivity) {
     }
 
     /** The classic's slim silver bar: the title on the left, play state and battery on the right. */
-    private fun drawModernTitle(c: Canvas, title: String) {
+    private fun drawModernTitle(c: Canvas, title: String, dark: Boolean) {
         val th = MODERN_TITLE_H.toFloat()
-        c.drawRect(0f, 0f, W.toFloat(), th, titleBg)
-        c.drawRect(0f, th - 1, W.toFloat(), th, line)
+        // On a black screen (Cover Flow) the bar is black too, with light text and outlines.
+        val outline = if (dark) darkOutline else stroke
+        if (dark) {
+            c.drawRect(0f, 0f, W.toFloat(), th, darkBg)
+        } else {
+            c.drawRect(0f, 0f, W.toFloat(), th, titleBg)
+            c.drawRect(0f, th - 1, W.toFloat(), th, line)
+        }
 
         val bx = W - 30f
         val by = 6f
         c.drawRoundRect(bx, by, bx + 22, by + 10, 2f, 2f, battery)
-        c.drawRoundRect(bx, by, bx + 22, by + 10, 2f, 2f, stroke)
-        c.drawRect(bx + 22, by + 3, bx + 24, by + 7, stroke)
+        c.drawRoundRect(bx, by, bx + 22, by + 10, 2f, 2f, outline)
+        c.drawRect(bx + 22, by + 3, bx + 24, by + 7, outline)
         val level = host.batteryLevel().coerceIn(0, 100)
         if (level < 100) {
             // The empty part of the battery.
             val fx = bx + 1 + 20 * level / 100f
-            track.color = 0xFFF2F2F2.toInt()
+            track.color = if (dark) 0xFF333436.toInt() else 0xFFF2F2F2.toInt()
             c.drawRect(fx, by + 1, bx + 21, by + 9, track)
             track.color = 0xFFE6E7E9.toInt()
         }
@@ -357,12 +370,15 @@ class Lcd(val host: MainActivity) {
                 c.drawRect(x + 6, by, x + 9.5f, by + 10, playBlue)
             }
         }
+        titleText.color = if (dark) Color.WHITE else INK
         c.drawText(fit(titleText, title, W - 70f), 8f, baseline(titleText, 0f, th), titleText)
+        titleText.color = INK
     }
 
-    private fun drawTitleBar(c: Canvas, title: String) {
+    private fun drawTitleBar(c: Canvas, screen: Screen) {
+        val title = screen.title()
         if (modern) {
-            drawModernTitle(c, title)
+            drawModernTitle(c, title, screen.dark)
             return
         }
         val ps = host.playback()

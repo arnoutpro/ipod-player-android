@@ -25,6 +25,9 @@ abstract class Screen protected constructor(
     /** Called each time the screen comes to the front. */
     open fun shown() {}
 
+    /** True for a black screen (Cover Flow): the 6th gen title bar turns black with it. */
+    open val dark: Boolean get() = false
+
     /** Milliseconds until the next redraw is needed, or -1 when the screen is static. */
     open fun frameDelay(now: Long): Long = -1
 }
