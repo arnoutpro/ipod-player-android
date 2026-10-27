@@ -128,7 +128,7 @@ class PlayerService : Service(), Playback {
         ch.setShowBadge(false)
         nm.createNotificationChannel(ch)
 
-        session = MediaSession(this, "iPod")
+        session = MediaSession(this, "iPod Player Android")
         session.setCallback(object : MediaSession.Callback() {
             override fun onPlay() = play()
             override fun onPause() = pause()
@@ -626,7 +626,7 @@ class PlayerService : Service(), Playback {
         ).build()
         return Notification.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.ic_media_play)
-            .setContentTitle(t?.title ?: "iPod")
+            .setContentTitle(t?.title ?: "iPod Player Android")
             .setContentText(if (t != null) "${t.artist} — ${t.album}" else "")
             .setContentIntent(openAppIntent())
             .setVisibility(Notification.VISIBILITY_PUBLIC)

@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "ipodgen3"
+rootProject.name = "ipod-player-android"
 include ':app'

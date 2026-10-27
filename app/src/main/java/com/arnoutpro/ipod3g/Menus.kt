@@ -538,7 +538,7 @@ class Menus(private val lcd: Lcd) {
         return ListScreen(
             lcd, "About",
             listOf(
-                item("iPod 3G Player"),
+                item("iPod Player Android"),
                 item("Songs").value { songs },
                 item("Artists").value { artists },
                 item("Albums").value { albums },

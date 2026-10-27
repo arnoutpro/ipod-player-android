@@ -30,20 +30,20 @@ jobs:
         run: ./gradlew --no-daemon assembleRelease
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/release/app-release.apk iPod3G-v1.0.${{ env.BUILD_NUMBER }}.apk
+        run: cp app/build/outputs/apk/release/app-release.apk iPodPlayerAndroid-v1.0.${{ env.BUILD_NUMBER }}.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: iPod3G-apk
-          path: iPod3G-*.apk
+          name: iPodPlayerAndroid-apk
+          path: iPodPlayerAndroid-*.apk
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ env.BUILD_NUMBER }}
-          name: iPod 3G v1.0.${{ env.BUILD_NUMBER }}
+          name: iPod Player Android v1.0.${{ env.BUILD_NUMBER }}
           target_commitish: ${{ github.sha }}
-          files: iPod3G-*.apk
+          files: iPodPlayerAndroid-*.apk
           body: |
             Download the APK below on your phone and open it to install
             (allow "Install unknown apps" for your browser when asked).

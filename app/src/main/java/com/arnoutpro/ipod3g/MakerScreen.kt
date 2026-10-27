@@ -38,7 +38,7 @@ class MakerScreen(lcd: Lcd, private val version: String) : Screen(lcd, "arnout.p
 
         val y = dst.bottom + 10
         center(c, text, "@arnoutpro", w, Lcd.baseline(text, y, text.fontSpacing))
-        center(c, small, "iPod 3G Player $version", w,
+        center(c, small, "iPod Player Android $version", w,
             Lcd.baseline(small, y + text.fontSpacing, small.fontSpacing))
     }
 

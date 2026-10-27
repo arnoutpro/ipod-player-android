@@ -1,10 +1,10 @@
-# iPod 3G Player
+# iPod Player Android
 
 *Serene listening, the way it used to feel.*
 
-An Android music player that looks and works like the 3rd generation iPod from 2003: the grey-blue
-LCD with its pixel font, the four red-lit buttons and the touch wheel, all under a clear acrylic
-layer. It plays the music on your phone, and your Spotify library if you connect it. You can send
+iPod Player Android is an Android music player that looks and works like the 3rd generation iPod
+from 2003: the grey-blue LCD with its pixel font, the four red-lit buttons and the touch wheel, all
+under a clear acrylic layer. Its screen can also take the colour look of the later iPod classic. It plays the music on your phone, and your Spotify library if you connect it. You can send
 it to Sonos speakers, a Chromecast or a Spotify Connect device.
 
 <p align="center">
@@ -15,8 +15,8 @@ it to Sonos speakers, a Chromecast or a Spotify Connect device.
   <img src="docs/screenshots/black-finish.png" width="220" alt="Black finish">
 </p>
 
-Not affiliated with Apple or Spotify. A personal hobby project, sideloaded rather than published
-on the Play Store.
+iPod Player Android is not affiliated with Apple or Spotify; iPod is a trademark of Apple Inc. A
+personal hobby project, sideloaded rather than published on the Play Store.
 
 ---
 
@@ -28,7 +28,7 @@ screen to scroll through.
 
 The iPod didn't do any of that. You picked an album, pressed play and put it down.
 
-That's what this app is for: listening sessions where the app stays out of the way. There's no
+That's what iPod Player Android is for: listening sessions where the app stays out of the way. There's no
 feed, no recommendations and no ads, just the menus of a 3rd generation iPod, the click of its
 wheel and the red glow of its buttons. If you miss how that felt, or never had one and like old
 hardware, this is a 2003 iPod on the phone you already carry.
@@ -64,9 +64,9 @@ Connect speaker. There's a 7-band equalizer, and a black finish for the evening.
 Every push to `main` builds a signed APK with GitHub Actions and publishes it as a release.
 
 1. On your phone, open the latest [release](../../releases).
-2. Download `iPod3G-v1.0.N.apk` and open it.
+2. Download `iPodPlayerAndroid-v1.0.N.apk` and open it.
 3. Allow "Install unknown apps" for your browser when Android asks.
-4. Open **iPod** and allow access to your music.
+4. Open **iPod Player Android** and allow access to your music.
 
 Every build is signed with the same key, so a new release installs over the old one and keeps
 your settings, playlists and Spotify sign-in.
@@ -93,7 +93,7 @@ Like the real thing, the face sits under a clear acrylic layer. The buttons and 
 into holes in it. Each hole casts a soft shadow on one side and catches the light on its polished
 edge, and a faint gloss runs across the face.
 
-The light comes from the ceiling of your room. The app reads the phone's gravity sensor, so the
+The light comes from the ceiling of your room. iPod Player Android reads the phone's gravity sensor, so the
 side facing up is the bright side: the shadows in the holes, the shading of the body, the gloss and
 the reflection on the screen glass all turn as you tilt the phone. Lay it flat on a table and the
 light comes from straight above, which makes the face look almost even.
@@ -137,7 +137,7 @@ The menus are the original iPod's, with a Spotify menu added.
 | **Now Playing** | Appears once something is playing |
 
 Lists are sorted the way the iPod sorted them: ignoring capitals and a leading "The". A long name
-scrolls sideways when you highlight it. The app reads your music from the phone's media library, so
+scrolls sideways when you highlight it. iPod Player Android reads your music from the phone's media library, so
 anything in `Music/` or another music folder shows up. Added some songs? Settings › Rescan Music.
 
 On-The-Go is your own quick playlist. Hold the centre button on any song to add it; the list is
@@ -209,7 +209,7 @@ Your Liked Songs, saved albums and followed artists are grouped like the iPod's 
 - **Songs:** all your liked songs, A–Z.
 - **Recently Liked:** the same songs in Spotify's order, newest first.
 
-The app loads your library once in the background and keeps it on the phone, so browsing is
+iPod Player Android loads your library once in the background and keeps it on the phone, so browsing is
 instant. It checks for changes when you open the Spotify menu, at most every 10 minutes. The very
 first load takes a while for a big library, but songs appear as they come in.
 
@@ -247,7 +247,7 @@ when you open the iPod, Now Playing picks it up.
 
 **Limits from Spotify's rules (2026)**
 
-The app runs in Spotify's *development mode*. That comes with rules the app can't change:
+iPod Player Android runs in Spotify's *development mode*. That comes with rules the app can't change:
 
 - You need **Spotify Premium**, both as the owner of the app registration and to play songs.
 - **At most 5 Spotify accounts** can use one app registration, and each one has to be added by
@@ -260,7 +260,7 @@ The app runs in Spotify's *development mode*. That comes with rules the app can'
 
 **Using your own Spotify app registration**
 
-The app ships with the author's Client ID. To use your own (for example to add your own 5 users):
+iPod Player Android ships with the author's Client ID. To use your own (for example to add your own 5 users):
 
 1. Create an app at [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard)
    with the redirect URI `ipod3g://spotify-callback`, and tick **Web API** and **Android**.
@@ -395,7 +395,7 @@ serve. You get 3 lives, points for every brick, and a new level when the wall is
 
 ## Background playback
 
-Music keeps playing when you leave the app. The notification and the lock screen show the song with
+Music keeps playing when you leave iPod Player Android. The notification and the lock screen show the song with
 play/pause, previous and next, and headset and Bluetooth buttons work too. Pull out your headphones
 and the music pauses. A phone call pauses it and it picks up again afterwards.
 
