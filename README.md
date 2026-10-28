@@ -2,10 +2,27 @@
 
 *Serene listening, the way it used to feel.*
 
-iPod Player Android is an Android music player that looks and works like the 3rd generation iPod
-from 2003: the grey-blue LCD with its pixel font, the four red-lit buttons and the touch wheel, all
-under a clear acrylic layer. Its screen can also take the colour look of the later iPod classic. It plays the music on your phone, and your Spotify library if you connect it. You can send
-it to Sonos speakers, a Chromecast or a Spotify Connect device.
+iPod Player Android turns your Android phone into an iPod. Out of the box it's the 3rd generation
+iPod from 2003: a grey-blue LCD with a pixel font, four red-lit buttons and a touch wheel, all under
+a clear acrylic layer. Switch the screen to the iPod classic and you get colour, album art and
+Cover Flow. It plays the music on your phone and, once you connect it, your Spotify library. Both
+can play on your Sonos speakers.
+
+What's in it:
+
+- **Two iPods in one.** Keep the 2003 screen, or switch to the 6th generation iPod classic: a white
+  screen with the glossy blue highlight, album art next to the main menus, Cover Flow, and a Now
+  Playing with the cover tilted and reflected. See [Menu Style](#menu-style).
+- **White or black.** The original white body, or a black one Apple never made, with a graphite
+  wheel and the same red glow. Auto follows your phone's dark mode. See [Settings](#settings).
+- **Spotify in the iPod's menus.** Your liked songs, saved albums, followed artists and playlists,
+  sorted the way the iPod sorts. Start Radio on any artist for an endless mix of songs like theirs;
+  Now Playing tells you which radio is on, for example "Artist Radio: 10cc". See
+  [Spotify](#spotify).
+- **Sonos.** Your own music and Spotify both play on your Sonos rooms, picked from the iPod's
+  Speakers menu. Spotify goes through the Sonos's own Spotify account, so it works even when the
+  Spotify app doesn't list the speaker, and radio keeps going there too. Chromecasts and Spotify
+  Connect speakers work as well. See [Speakers](#speakers).
 
 <p align="center">
   <img src="docs/screenshots/main-menu.png" width="220" alt="Main menu, white">
@@ -52,8 +69,9 @@ wheel and the red glow of its buttons. If you miss how that felt, or never had o
 hardware, this is a 2003 iPod on the phone you already carry.
 
 It does keep a few things you'd hate to give up. Your Spotify library shows up in the iPod's menus,
-sorted by artist and album. The music can go to your Sonos speakers, a Chromecast or a Spotify
-Connect speaker. There's a 7-band equalizer, and a black finish for the evening.
+sorted by artist and album, and any artist can become a radio. The music can go to your Sonos
+speakers, a Chromecast or a Spotify Connect speaker. There's a 7-band equalizer, and a black finish
+for the evening. Had an iPod classic instead? Switch the screen to that one.
 
 ---
 
@@ -206,7 +224,8 @@ applies to the phone's own music; Spotify's sound comes from the Spotify app and
 ## Spotify
 
 The Spotify menu shows your Spotify library as iPod menus and plays it through the Spotify app on
-the same phone. Now Playing and the buttons control it the same way as your own music.
+the same phone, or on a Sonos (see [Speakers](#speakers)). Now Playing and the buttons control it
+the same way as your own music.
 
 **Connecting**
 
@@ -250,6 +269,8 @@ so there's no list to scroll; Next skips ahead. The radio starts in the Spotify 
 everything else. A speaker can't take a radio link, so for a speaker the iPod takes the radio's
 next 10 songs along; after the tenth (or Next on it) a new radio starts from that song, so it keeps
 going. For a Sonos the radio starts silently on the phone just long enough to read those songs.
+Now Playing names the radio, for example "Artist Radio: 10cc" or "Song Radio: Lost", and keeps
+that name while new radios carry it on.
 
 The music comes out of this phone unless you choose a speaker under [Speakers](#speakers). That's
 on purpose: Spotify likes to play on whatever device was active last, and during testing that
