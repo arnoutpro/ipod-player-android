@@ -25,7 +25,11 @@ And on a real phone:
   <img src="docs/photos/3rd-gen-now-playing.jpg" width="260" alt="iPod Player Android on a phone: the 3rd Gen Now Playing">
 </p>
 <p align="center">
-  <img src="docs/photos/black-6th-gen-now-playing.jpg" width="300" alt="iPod Player Android on a phone: the black finish with the 6th Gen Now Playing, Spotify on a Sonos Era 100">
+  <img src="docs/photos/black-6th-gen-now-playing.jpg" width="260" alt="iPod Player Android on a phone: the black finish with the 6th Gen Now Playing, Spotify on a Sonos Era 100">
+  &nbsp;
+  <img src="docs/photos/black-cover-flow.jpg" width="260" alt="iPod Player Android on a phone: Cover Flow on the black finish">
+  &nbsp;
+  <img src="docs/photos/black-3rd-gen-now-playing.jpg" width="260" alt="iPod Player Android on a phone: the black finish with the 3rd Gen Now Playing">
 </p>
 
 iPod Player Android is not affiliated with Apple or Spotify; iPod is a trademark of Apple Inc. A
