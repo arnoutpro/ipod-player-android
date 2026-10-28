@@ -15,6 +15,16 @@ it to Sonos speakers, a Chromecast or a Spotify Connect device.
   <img src="docs/screenshots/black-finish.png" width="220" alt="Black finish">
 </p>
 
+And on a real phone:
+
+<p align="center">
+  <img src="docs/photos/6th-gen-main-menu.jpg" width="260" alt="iPod Player Android on a phone: the 6th Gen main menu with album art">
+  &nbsp;
+  <img src="docs/photos/cover-flow.jpg" width="260" alt="iPod Player Android on a phone: Cover Flow">
+  &nbsp;
+  <img src="docs/photos/3rd-gen-now-playing.jpg" width="260" alt="iPod Player Android on a phone: the 3rd Gen Now Playing">
+</p>
+
 iPod Player Android is not affiliated with Apple or Spotify; iPod is a trademark of Apple Inc. A
 personal hobby project, sideloaded rather than published on the Play Store.
 
