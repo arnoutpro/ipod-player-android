@@ -43,11 +43,7 @@ jobs:
       - name: Rename APK
         run: cp app/build/outputs/apk/release/app-release.apk iPodPlayerAndroid-v1.0.${{ env.BUILD_NUMBER }}.apk
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: iPodPlayerAndroid-apk
-          path: iPodPlayerAndroid-*.apk
-
+      # No separate build artifact: the release below already holds the APK.
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
