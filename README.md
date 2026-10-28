@@ -2,6 +2,8 @@
 
 *Serene listening, the way it used to feel.*
 
+**[Website](https://arnout.pro/apps/ipod-player-android/)** · **[Download the latest APK](../../releases/latest)**
+
 iPod Player Android turns your Android phone into an iPod. Out of the box it's the 3rd generation
 iPod from 2003: a grey-blue LCD with a pixel font, four red-lit buttons and a touch wheel, all under
 a clear acrylic layer. Switch the screen to the iPod classic and you get colour, album art and
@@ -104,6 +106,9 @@ Every push to `main` builds a signed APK with GitHub Actions and publishes it as
 2. Download `iPodPlayerAndroid-v1.0.N.apk` and open it.
 3. Allow "Install unknown apps" for your browser when Android asks.
 4. Open **iPod Player Android** and allow access to your music.
+
+Prefer a quick tour first? The [app's page on arnout.pro](https://arnout.pro/apps/ipod-player-android/) shows
+the screens and photos on a real phone.
 
 Every build is signed with the same key, so a new release installs over the old one and keeps
 your settings, playlists and Spotify sign-in.
@@ -531,7 +536,8 @@ layout files and no image assets: everything on screen is drawn on a `Canvas`.
 
 ## License
 
-iPod Player Android is made by [@arnoutpro](https://github.com/arnoutpro) and shared under the
+iPod Player Android is made by Arnout van der Elst ([arnout.pro](https://arnout.pro),
+[@arnoutpro](https://github.com/arnoutpro)) and shared under the
 [PolyForm Noncommercial License 1.0.0](LICENSE.md).
 
 In plain words: use it, change it and pass it on as much as you like, as long as nobody makes money
