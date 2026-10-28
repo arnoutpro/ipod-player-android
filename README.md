@@ -442,9 +442,11 @@ You need JDK 17 and the Android SDK (Android Studio installs both).
 The APK lands in `app/build/outputs/apk/release/`. If Gradle can't find the SDK, set
 `ANDROID_HOME`, for example `ANDROID_HOME=~/Library/Android/sdk ./gradlew assembleRelease`.
 
-**Signing:** the APK is signed with `app/ipod3g.jks`, a key kept in this repo on purpose, so every
-build, local or from GitHub, installs over the previous one. It's fine for a personal sideloaded
-app; never use it for the Play Store.
+**Signing:** releases are signed with the author's key, which isn't in the repo. GitHub's build
+reads it from the repo's secrets (`SIGNING_KEYSTORE_BASE64`, `SIGNING_PASSWORD`). Building it
+yourself, you get an APK signed with Android's debug key: it runs fine, but installs as a separate
+app rather than as an update to the release. To sign with your own key, point `ipodKeystore` and
+`ipodKeyPassword` in `~/.gradle/gradle.properties` at it (the key's alias is `ipod3g`).
 
 **Version numbers:** the version (`1.0.N`) is GitHub's run number plus 19, set by the workflow as
 `BUILD_NUMBER`; the offset comes from test builds that once ran ahead, and a jump to 1.0.60. A local build

@@ -26,7 +26,18 @@ jobs:
       - name: Set build number
         run: echo "BUILD_NUMBER=$(( ${{ github.run_number }} + 19 ))" >> "$GITHUB_ENV"
 
+      # The release key lives in the repo's secrets, not in the repo.
+      - name: Unpack the signing key
+        env:
+          KEYSTORE: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE" ]; then echo "::error::The SIGNING_KEYSTORE_BASE64 secret is missing"; exit 1; fi
+          echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "SIGNING_KEYSTORE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
       - name: Build signed release APK
+        env:
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
         run: ./gradlew --no-daemon assembleRelease
 
       - name: Rename APK

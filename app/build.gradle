@@ -17,14 +17,21 @@ android {
         versionName "1.0.${build}"
     }
 
-    // A fixed key that lives in the repo, so every build can be installed over the
-    // previous one. Fine for a personal sideloaded app, never use it for the Play Store.
+    // The release key stays out of the repo. GitHub's build gets it from the repo's secrets
+    // (SIGNING_KEYSTORE, SIGNING_PASSWORD), a local build from ~/.gradle/gradle.properties
+    // (ipodKeystore, ipodKeyPassword). Without it a build is signed with Android's debug key and
+    // won't install over the real app.
+    def keystorePath = System.getenv('SIGNING_KEYSTORE') ?: project.findProperty('ipodKeystore')
+    def signingPassword = System.getenv('SIGNING_PASSWORD') ?: project.findProperty('ipodKeyPassword')
+    def haveKey = keystorePath && signingPassword && file(keystorePath).exists()
     signingConfigs {
-        local {
-            storeFile file('ipod3g.jks')
-            storePassword 'ipod3gpass'
-            keyAlias 'ipod3g'
-            keyPassword 'ipod3gpass'
+        release {
+            if (haveKey) {
+                storeFile file(keystorePath)
+                storePassword signingPassword
+                keyAlias 'ipod3g'
+                keyPassword signingPassword
+            }
         }
     }
 
@@ -34,10 +41,10 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.local
+            signingConfig haveKey ? signingConfigs.release : signingConfigs.debug
         }
         debug {
-            signingConfig signingConfigs.local
+            if (haveKey) signingConfig signingConfigs.release
         }
     }
 

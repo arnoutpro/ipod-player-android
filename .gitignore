@@ -3,3 +3,5 @@ build/
 local.properties
 *.iml
 .idea/
+# The release key lives outside the repo (see app/build.gradle).
+*.jks
