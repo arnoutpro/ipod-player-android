@@ -29,7 +29,8 @@ And on a real phone:
 </p>
 
 iPod Player Android is not affiliated with Apple or Spotify; iPod is a trademark of Apple Inc. A
-personal hobby project, sideloaded rather than published on the Play Store.
+personal hobby project, sideloaded rather than published on the Play Store. Free for personal use,
+not for sale: see [License](#license).
 
 ---
 
@@ -69,6 +70,7 @@ Connect speaker. There's a 7-band equalizer, and a black finish for the evening.
 - [Background playback](#background-playback)
 - [Building it yourself](#building-it-yourself)
 - [How it's built](#how-its-built)
+- [License](#license)
 
 ---
 
@@ -497,3 +499,20 @@ layout files and no image assets: everything on screen is drawn on a `Canvas`.
 | [`Sonos`](app/src/main/java/com/arnoutpro/ipod3g/Sonos.kt), [`SonosSpeaker`](app/src/main/java/com/arnoutpro/ipod3g/SonosSpeaker.kt) | Finds Sonos groups on the Wi-Fi (SSDP) and controls them over UPnP |
 | [`SonosSpotify`](app/src/main/java/com/arnoutpro/ipod3g/SonosSpotify.kt) | Plays Spotify on a Sonos through its own Spotify account: fills the Sonos queue and reads back what plays |
 | [`Clicker`](app/src/main/java/com/arnoutpro/ipod3g/Clicker.kt) | The click-wheel tick, synthesised so no sound files are needed |
+
+---
+
+## License
+
+iPod Player Android is made by [@arnoutpro](https://github.com/arnoutpro) and shared under the
+[PolyForm Noncommercial License 1.0.0](LICENSE.md).
+
+In plain words: use it, change it and pass it on as much as you like, as long as nobody makes money
+with it. Selling the app, putting it in a store as a paid app, adding ads or in-app purchases, or
+building it into a company's product all need my permission first. Anyone who shares it, changed or
+not, has to keep the two `Required Notice:` lines at the top of [LICENSE.md](LICENSE.md), so the
+credit stays with it.
+
+The license covers the code and the drawings of the face. It doesn't cover the iPod name or Apple's
+designs, and the Spotify and Google libraries in the app keep their own licenses. Want to do
+something the license doesn't allow? Open an issue and ask.
