@@ -351,6 +351,19 @@ dark mode and switches the moment it changes, without losing your place in the m
 Settings › **Menu Style** switches the screen between two iPods. The body, the buttons and the
 wheel stay the same; only what's on the LCD changes.
 
+<p align="center">
+  <img src="docs/screenshots/6th-gen-main-menu.jpg" width="220" alt="6th Gen main menu with album art">
+  &nbsp;
+  <img src="docs/screenshots/6th-gen-cover-flow.jpg" width="220" alt="Cover Flow">
+  &nbsp;
+  <img src="docs/screenshots/6th-gen-cover-flow-black.jpg" width="220" alt="Cover Flow on the black finish">
+</p>
+<p align="center">
+  <img src="docs/screenshots/6th-gen-artist.jpg" width="220" alt="A Spotify artist with Start Radio">
+  &nbsp;
+  <img src="docs/screenshots/6th-gen-speakers.jpg" width="220" alt="Speakers with two Sonos rooms">
+</p>
+
 - **3rd Gen** (the default): the original greyish-blue LCD with chunky bold pixel text, as
   described above.
 - **6th Gen**: the colour screen of the iPod classic (6th and 7th generation).
